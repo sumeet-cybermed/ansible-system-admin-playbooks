@@ -1,0 +1,51 @@
+- name: virtualbox guest additions dependencies present(apt)
+  tags:  install_packages
+  apt: package={{ item }} state={{installed_package_state}}
+  with_items:
+    - "linux-headers-{{ ansible_kernel }}"
+    - dkms
+    - build-essential
+    - module-assistant
+    # - linux-headers-generic
+  when: "ansible_pkg_mgr == 'apt'"
+  
+- name: virtualbox guest additions  dependencies present (yum)
+  tags:  install_packages
+  yum: package={{ item }} state={{installed_package_state}}
+  with_items:
+    - "linux-headers-{{ ansible_kernel }}"
+    - dkms
+    - build-essential
+    # - linux-headers-generic
+  when: "ansible_pkg_mgr == 'yum'"
+
+- name: check if download virtualbox guest additions iso downloaded
+  tags: [ 'always' ]
+  stat: path={{ virtualbox.guest_additions.iso_dir }}/{{ virtualbox.guest_additions.iso_file }}
+  register: guest_additions_downloaded
+  
+- name: download virtualbox guest additions iso
+  get_url: url={{ virtualbox.guest_additions.iso_url }} dest={{ virtualbox.guest_additions.iso_dir }} 
+  when: not guest_additions_downloaded.stat.exists
+  
+- name: ensure mount dir exists
+  file: path={{ virtualbox.guest_additions.iso_mountdir }}/VBoxGuestAdditions state=directory
+
+- name: umount virtualbox guest additions iso
+  shell: umount {{ virtualbox.guest_additions.iso_mountdir }}/VBoxGuestAdditions removes={{ virtualbox.guest_additions.iso_mountdir }}/VBoxGuestAdditions
+  ignore_errors: True #if already mounted
+      
+- name: mount virtualbox guest additions iso
+  tags: [ 'always' ]
+  command: mount {{ virtualbox.guest_additions.iso_dir }}/{{ virtualbox.guest_additions.iso_file }} -o loop {{ virtualbox.guest_additions.iso_mountdir }}/VBoxGuestAdditions
+  register: virtualbox_guest_additions_mounted
+  
+  
+- name: virtualbox guest additions present
+  shell: "{{ virtualbox.guest_additions.iso_mountdir }}/VBoxGuestAdditions/VBoxLinuxAdditions.run --nox11 -- --force creates=/lib/modules/{{ ansible_kernel }}/updates/dkms/vboxguest.ko"
+  ignore_errors: True #some sprrious services fail to start
+  
+- name: umount virtualbox guest additions iso
+  shell: umount {{ virtualbox.guest_additions.iso_mountdir }}/VBoxGuestAdditions removes={{ virtualbox.guest_additions.iso_mountdir }}/VBoxGuestAdditions
+  when: virtualbox_guest_additions_mounted.changed
+  

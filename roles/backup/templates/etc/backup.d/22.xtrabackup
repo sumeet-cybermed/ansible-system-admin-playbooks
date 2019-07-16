@@ -1,0 +1,42 @@
+# # Important! The when must occur before any sections in the config file.
+# A configuration file will be processed at the time(s) specified by the "when" option. If multiple "when" options are present, then they all apply. If two configurations files are scheduled to run in the same hour, then we fall back on the alphabetical ordering specified above.
+# For this reason, if you want to make sure that a particular backup action is processed before another, then you should give them the same "when" value.
+
+# when = sundays at 02:00
+# when = 30th at 22
+# when = 30 at 22:00
+# when = everyday at 01            <-- the default
+# when = Tuesday at 05:00
+#when = everyday at 00:30
+
+{% for schedule in backup_schedules.xtrabackup %}
+{{schedule}}
+{% endfor %}
+
+#
+backupdir = {{backup_dir_mysql}}/xtrabackup
+incremental  = yes
+full_on = sun
+nicelevel = 0
+options = 
+# --compress 
+
+#custom option added by sumeet to specify defaults file
+defaultsfile = --defaults-extra-file=/root/xtrabackup.my.cnf
+
+user = root
+dbusername = root
+dbpassword = {{ mysql_root_secure_password }}
+
+# configfile = /root/.my.cnf
+
+# databases = <all | db1 db2 db3 > (default = all)
+# which databases to backup. should either be the word 'all' or a
+# space separated list of database names.
+databases = all
+
+# make the files owned by this user
+# note: you must be able to ssh backupuser@backhost
+# without specifying a password
+# user = {{backup_username}}
+

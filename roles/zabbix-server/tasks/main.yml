@@ -1,0 +1,111 @@
+---
+# tasks file for wdijkerman.zabbix
+
+- name: "Get Apache version"
+  action: shell apachectl -v | grep 'version' | awk -F '/' '{ print $2 }'| awk '{ print $1 }' | cut -c 1-3
+  register: apachectl_version
+  ignore_errors: true
+
+- name: "Set correct apache_version"
+  set_fact:
+    apache_version: "{{ apachectl_version.stdout }}"
+
+- name: "Install the correct repository"
+  include: "RedHat.yml"
+  when: ansible_os_family == "RedHat"
+  tags:
+    - install_packages
+
+- name: "Install the correct repository"
+  include: "Debian.yml"
+  when: ansible_os_family == "Debian"
+  tags:
+    - install_packages
+
+- name: "Installing the postgresql database"
+  include: "postgresql.yml"
+  when: database_type_long == "postgresql"
+  tags:
+    - install_packages
+
+- name: "Installing the mysql database"
+  include: "mysql.yml"
+  when: database_type_long == "mysql"
+  tags:
+    - install_packages
+
+- name: "Configure zabbix-server"
+  template: src=zabbix_server.conf
+            dest=/etc/zabbix/zabbix_server.conf
+            owner=zabbix
+            group=zabbix
+            mode=0644
+  notify: zabbix-server restarted
+  tags:
+    - zabbix-server
+    - init
+    - config
+
+- name: "Create include dir zabbix-server"
+  file: path={{ server_include }}
+        owner=zabbix
+        group=zabbix
+        state=directory
+        mode=0644
+  tags:
+    - zabbix-server
+    - init
+    - config
+
+- name: "Configure zabbix-web"
+  template: src=zabbix.conf.php
+            dest=/etc/zabbix/web/zabbix.conf.php
+            owner=zabbix
+            group=zabbix
+            mode=0644
+  tags:
+    - zabbix-server
+    - init
+    - config'
+
+- name: fix gnutls and trousers bug which causes 'Job for zabbix-server.service failed because a fatal signal was delivered to the control process'
+  shell: yum -y update gnutls trousers
+  ignore_errors: true
+  tags:
+    - always
+
+
+- name: "Install nginx vhost"
+  template: src=nginx_vhost.conf
+            dest=/etc/nginx/conf.d/zabbix.conf
+            owner=root
+            group=root
+            mode=0644
+  when: zabbix_vhost and zabbix_web and webserver_type == 'nginx'
+  notify: nginx restart
+  tags:
+    - zabbix-server
+    - always
+
+
+- name: "set permissions for /etc/zabbix/web"
+  file: path=/etc/zabbix/web
+            owner={{web_user}}
+            group={{web_group}}
+            state=directory
+  when: zabbix_vhost and zabbix_web and webserver_type == 'nginx'
+  tags:
+    - zabbix-server
+    - always
+
+- name: setup zabbix server tools
+  include: "tools.yml"
+
+- name: "Make sure the zabbix-server service is running"
+  shell: /bin/true
+  notify: zabbix-server restarted
+  tags:
+    - always
+  ignore_errors: true
+
+

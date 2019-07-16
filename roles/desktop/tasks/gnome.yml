@@ -1,0 +1,42 @@
+
+- name: install gnome without recommends (apt)
+  tags:  install_packages
+  shell: "aptitude -q --without-recommends -o APT::Install-Recommends=no -y install ~t^desktop$ ~t^gnome-desktop$"
+  ignore_errors: false
+  when: "ansible_pkg_mgr == 'apt'"
+  
+- name: install utils (apt)
+  tags:  install_packages
+  apt: name={{item}} state={{installed_package_state}}
+  with_items:
+    - gedit
+    - gksudo
+    - firefox
+    # - thunderbird
+    - gnome-tweak-tool
+    # - icedove
+    - iceweasel
+  ignore_errors: true
+  when: "ansible_pkg_mgr == 'apt'"
+  
+- name: Install Gnome (yum)
+  tags:  install_packages
+  shell: "yum -y groupinstall 'X Window System' 'GNOME'"
+  when: "ansible_pkg_mgr == 'yum'"
+ 
+- name: install utils (yum)
+  tags:  install_packages
+  yum: name={{item}} state={{installed_package_state}}
+  with_items:
+    - gedit
+    - gksudo
+    - firefox
+    - thunderbird
+    - gnome-tweak-tool
+  ignore_errors: true
+  when: "ansible_pkg_mgr == 'yum'"  
+
+- name: tweaks
+  shell: "{{item}}"
+  with_items:
+    - "gsettings set org.gnome.desktop.background show-desktop-icons true"

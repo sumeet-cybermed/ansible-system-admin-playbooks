@@ -1,0 +1,115 @@
+
+  
+- name: Install remi repo. (yum)
+  tags:  install_packages
+  yum:
+    name: "{{ yum_remi_repo_url }}"
+    state: present
+  when: is_initial_run is defined
+  async: 180
+  poll: 3
+  ignore_errors: false #timeout is common
+  
+- name: Import remi GPG key. (yum)
+  tags:  install_packages
+  rpm_key:
+    key: "{{ yum_remi_repo_gpg_key_url }}"
+    state: present
+    validate_certs: no
+  async: 180
+  poll: 3
+  when: is_initial_run is defined
+  ignore_errors: false
+
+  #rpmforge is a dead project
+- name: Import rpmforge GPG key. (yum)
+  tags:  install_packages
+  rpm_key:
+    key: "{{ yum_rpmforge_repo_gpg_key_url }}"
+    state: present
+    validate_certs: no
+  async: 180
+  poll: 3
+  when: false and is_initial_run is defined
+  ignore_errors: false
+
+  #rpmforge is a dead project
+- name: Install rpmforge repo. (yum)
+  tags:  install_packages
+  yum:
+    name: "{{ yum_rpmforge_repo_url }}"
+    state: present
+  async: 180
+  poll: 3
+  when: false and is_initial_run is defined
+  ignore_errors: false #timeout is common - we directly add the repo file below
+
+  #rpmforge is a dead project
+- name: Customize rpmforge repo. (yum)
+  tags:  install_packages
+  template: src=rpmforge.repo dest=/etc/yum.repos.d/rpmforge.repo owner=root group=root
+  when: false
+    
+- name: Install basic essential packages (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}} "
+  with_items:
+    - python-pycurl
+    - redhat-lsb-core
+    - yum-utils
+    - htop
+    - bash-completion
+    - cifs-utils
+   # - subversion
+    - git
+    - make
+    - gcc
+    - git
+    - curl
+    - unzip
+    - traceroute
+    - gcc-c++
+    - mercurial
+    # - pkg-config    
+    - nano
+    - mlocate
+    - iptraf
+    - iotop
+    - deltarpm
+    - ntp
+    - bash
+    - postfix
+    - python-passlib
+    - ncurses
+    - ncdu
+  when: is_initial_run is defined
+  ignore_errors: true #gives error on rhel7 even if all packagesd already installed!
+
+- name: Install additional essential packages (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}} "
+  with_items:  
+    - system-config-firewall-tui
+    - setools
+    - policycoreutils-python
+    - selinux-policy-targeted
+    - selinux-policy-devel
+  when: is_initial_run is defined     
+  ignore_errors: true
+
+- name: install stress rpm
+  shell: "cd /tmp && wget ftp://fr2.rpmfind.net/linux/dag/redhat/el7/en/x86_64/dag/RPMS/stress-1.0.2-1.el7.rf.x86_64.rpm && yum localinstall -y stress-1.0.2-1.el7.rf.x86_64.rpm"
+  ignore_errors: true
+  
+- name: set ntpd to strt on boot
+  shell: "chkconfig ntpd on"
+  ignore_errors: true  
+  
+- name: install compat libs
+  tags:  install_packages
+  shell: yum groupinstall "Compatibility libraries" -y  
+  
+##NB: must also disable selinux and reboot before this process stops running!!!!
+- name: remove setroubleshoot* as we do not have a desktop and it can take up high cpu!!!
+  shell: yum -y remove setroubleshoot*
+  ignore_errors: false

@@ -1,0 +1,23 @@
+# User Notes - {{ansible_hostname}} #
+
+## Sites/Applications On This server##
+
+### Applications ###
+{% for site in user_websites_installed|sort(attribute='sortas') %}{% if site.path != "" %}
+* [{{site.path }}](http://{{ site.path }}) -- {{site.description}}
+{% endif %}{% endfor %}
+
+### Admin Sites ###
+{% for site in default_websites_installed|sort(attribute='sortas') %}{% if site.path != "" %}
+* [{{site.path }}](http://{{ site.path }}) -- {{site.description}}
+{% endif %}{% endfor %}
+
+
+## IP Addresses ##
+* External Ip Address:
+  - [{{external_ip_address}}](http://{{external_ip_address}})
+ 
+* All IP Addresses:
+{% for ipaddr in ansible_all_ipv4_addresses %}  
+  - [{{ipaddr}}](http://{{ipaddr}})
+{% endfor%}

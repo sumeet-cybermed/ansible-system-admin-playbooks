@@ -1,0 +1,13 @@
+container_config_file_block: "\n\n#added by custom script\nlxc.network.type = phys\nlxc.network.flags = up\nlxc.network.link = {{host_mapped_nic}}\nlxc.network.name={{guest_mapped_nic}}\n#added by custom script END\n\n"
+
+container_ip_static_ip_block: "{% if guest_ipaddr='' %}{%else%}    address {{guest_ipaddr}}{% endif %}"
+
+container_ip_static_netmask_block: "{% if guest_ip_netmask='' %}    netmask 255.255.255.0{%else%}    netmask {{guest_ip_netmask}}{% endif %}"
+
+ #we add metric to allow gateway to be defined - else get Error RTNETLINK answers: File exists!
+container_ip_gateway_block: "{% if guest_ip_gateway='' %}{% else %}    gateway {{guest_ip_gateway}}\n    metric 100{% endif %}"
+
+container_nic_ipaddr_block: "{% if guest_ipaddr='' %} dhcp {%else%} static\n{{container_ip_static_ip_block}}\n{{container_ip_static_netmask_block}}\n{{container_ip_gateway_block}}{% endif %}"
+
+container_network_interfaces_file_block: "\n\n#added by custom script\nauto {{guest_mapped_nic}}\niface {{guest_mapped_nic}} inet {{container_nic_ipaddr_block}}\n\n#added by custom script END\n\n"
+###

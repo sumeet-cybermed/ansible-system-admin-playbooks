@@ -1,0 +1,80 @@
+---
+- name: ensure selinux is running in permissive mode
+  tags: ['always']
+  shell: setenforce 0
+  when: selinux_state != 'enabled'
+  ignore_errors: true
+
+##if this is run in 2 steps of install_packages and then the rest, it fails - why??? so run as one step - if it fails, due to download issues, no problems - just run again
+
+# If you can, your storage servers should be in a secure zone in your network removing the need to firewall each machine. Inspecting packets incurs an overhead, 
+- name: open firewall for gluster
+  tags: ['always']
+  shell: "firewall-cmd --permanent --zone=public {{item}}" 
+  with_items:
+    - "--add-port=24007/tcp"
+    - "--add-port=24008/tcp"
+    - "--add-port=24009/tcp"
+    - "--add-port=49152/tcp"
+    - "--add-port=38465/tcp"
+    - "--add-port=38466/tcp"
+    - "--add-port=38467/tcp"
+    - "--add-port=111/tcp"
+    - "--add-port=111/udp"
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  
+- command: /bin/true
+  tags: ['always']
+  notify: firewalld reload
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+
+- name: set up gluster repo
+  # get_url: url=http://download.gluster.org/pub/gluster/glusterfs/LATEST/RHEL/glusterfs-epel.repo dest=/etc/yum.repos.d/glusterfs-epel.repo
+  tags: [ install_packages ]
+  yum: name=centos-release-gluster state={{installed_package_state}}
+
+- name: install gluster
+  yum: name={{ item }} state={{installed_package_state}}
+  tags: [ install_packages ]
+  with_items:
+    - glusterfs-server
+    - glusterfs-client
+
+- name: enable gluster
+  service: name=glusterd state=started enabled=yes
+
+- name: create gluster brick and mount directories
+  file: path={{ item }} state=directory mode=0775
+  with_items:
+    - "/srv/brick_var_www"
+    - "{{www_root}}"
+  when: is_clustered_storage_var_www
+  
+- name: create gluster volume
+  gluster_volume:
+    state: present
+    name: "{{item.storage}}"
+    brick: "{{item.brick}}"
+    replicas: 3
+    cluster: "{% for node in groups['cluster'] -%}{{ hostvars[node][lb.internal_eth_name]['ipv4']['address']}}{% if not loop.last %},{% endif %}{%- endfor %}"
+    host: "{{ lb.internal_bind_address }}"
+    ##https://www.jamescoyle.net/how-to/559-glusterfs-performance-tuning
+    options: {performance.io-thread-count: '32', performance.cache-size: '256MB', performance.cache-refresh-timeout: '60', performance.write-behind-window-size: '1MB'}
+#    cluster.stripe-block-size: '32KB',
+    force: yes
+  with_items:
+    - {storage: "storage_var_www", brick: "/srv/brick_var_www"}
+  when: is_clustered_storage_var_www
+  run_once: true
+
+- name: mount gluster volume
+  mount:
+    name: "{{item.name}}"
+    src: "{{ lb.internal_bind_address }}:/{{item.storage}}"
+    fstype: glusterfs
+    opts: "defaults,_netdev"
+    state: mounted
+  with_items:
+    - {name: "{{www_root}}", storage: "storage_var_www"}
+  when: is_clustered_storage_var_www
+  

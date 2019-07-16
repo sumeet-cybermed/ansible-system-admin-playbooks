@@ -1,0 +1,13 @@
+# TODO: https://www.flockport.com/supercharge-lxc-with-btrfs/: format a small partition as btrfs and mount that as your LXC container folder  
+- name: install lxd repo
+  tags:  install_packages
+  apt_repository: repo='ppa:ubuntu-lxc/lxd-git-master' state=present
+  when: ansible_distribution == 'Ubuntu'
+  
+- name: install lxd
+  apt: name={{item}} state={{installed_package_state}}
+  tags:  install_packages
+  with_items:
+    - lxd
+  ignore_errors: true
+# when: ansible_distribution == 'Ubuntu'

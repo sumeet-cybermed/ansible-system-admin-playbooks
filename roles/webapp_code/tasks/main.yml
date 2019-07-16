@@ -1,0 +1,267 @@
+---
+- debug: var={{item}}
+  with_items:
+    - sites
+    - webapp
+    - webapp_relativepath
+    - is_cluster
+    - cluster_master
+    - domain  
+    - webapp_php_domains
+    - webapp_php7_domains
+    - webapp_hhvm_domains
+   
+- name: "Ensure Dir Exists webapp_local_mapped_folder "
+  tags: [ 'always' ]
+  file: path={{ webapp_local_mapped_folder }}  state=directory 
+  when: webapp_git_clone == ""
+    
+- name: Remove existing files Before Symlinking folder {{ www_root}}/{{ webapp }}
+  tags: [ 'always' ]
+  file: 
+    path: "{{ www_root}}/{{ webapp }}"
+    state: absent 
+  when: webapp_symlink_source_on_host
+  
+- name: "Symlink Files {{ webapp_local_mapped_folder }} to {{ www_root}}/{{ webapp }}"
+  tags: [ 'always' ]
+  file: 
+    path: "{{ www_root}}/{{ webapp }}"
+    src: "{{ webapp_local_mapped_folder }}"
+    state: link 
+    force: yes
+    follow: true
+  when: webapp_git_clone == "" and webapp_symlink_source_on_host
+  
+- name: "Ensure Dir Exists {{ www_root}}/{{ webapp }}"
+  tags: [ 'always' ]
+  file: 
+     path: "{{ www_root}}/{{ webapp }}"
+     state: "directory"
+     owner: "{{ web_user }}"
+     group: "{{ web_group }}"
+  when: not webapp_symlink_source_on_host and (not is_clustered_storage_var_www or cluster_master is defined)
+
+- name: "Clone from GIT - shell - OLD - fails if mounted sub dirs"
+#  modify to to git init, git stash, git pull as some subdirs are mounted and rm -Rf command will fail
+  tags: [ install_packages ]
+  shell: "rm -Rf {{ www_root}}/{{ webapp }} | true;
+  mkdir -p {{ www_root}}/{{ webapp }};  
+  cd {{ www_root}}/{{ webapp }}; 
+  git clone --depth=1 -o StrictHostKeyChecking=no {{webapp_git_clone}} ."
+  when: False and (webapp_git_clone != "" and not webapp_skip_git_clone) and (not is_clustered_storage_var_www or cluster_master is defined)
+
+
+- name: unmount directories to be ALWAYS mounted on nfs servers so that git hard reset will not deleted files on mounted directoriues!!!
+  tags: [ 'always' ]
+  shell: "umount -l {{item.mount_path_full}}"
+  with_items:
+      "{{webapp_nfs_mounts_always}}"
+  ignore_errors: true #as it may already be mounted so will give error
+
+- name: unmount directories to be CLUSTERED WWW ONLY mounted on nfs servers so that git hard reset will not deleted files on mounted directoriues!!!
+  tags: [ 'always' ]
+  shell: "umount -l -f {{item.local_path_full}}"
+  with_items:
+    "{{webapp_nfs_mounts_if_clustered_www}}"
+  when: is_clustered_storage_var_www
+  ignore_errors: true #as it may already be mounted so will give error
+
+- name: "Clone from GIT - shell - NEW"
+#  modify to to git init, git stash, git pull as some subdirs are mounted and rm -Rf command will fail
+# git remote add origin can fail if already added so end with ; not &&
+  tags: [ install_packages ]
+  shell: "mkdir -p {{ www_root}}/{{ webapp }} &&
+  cd {{ www_root}}/{{ webapp }} &&
+  git init &&
+  git remote add origin {{webapp_git_clone}};
+  git remote update &&
+  git checkout {{webapp_git_branch_or_tag}} --quiet &&
+  git reset --hard origin/{{webapp_git_branch_or_tag}} "
+  when: (webapp_git_clone != "" and not webapp_skip_git_clone) and (not is_clustered_storage_var_www or cluster_master is defined)
+
+- name: "post install template files"
+  tags: [ 'always' ]
+  template:
+    src: "{{item}}"
+    dest: "{{item}}"
+  with_items:
+    "{{webapp_post_install_template_files}}"
+  when: webapp_post_install_template_files is defined and webapp_post_install_template_files[0] is defined and (not is_clustered_storage_var_www or cluster_master is defined)
+  ignore_errors: true # is failing on cluster - set to false after debugging
+
+- name: "Set Owner: {{ web_group }} for {{ www_root}}/{{ webapp }}"
+  tags: [ 'always' ]
+  file:
+    path: "{{ www_root}}/{{ webapp }}"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    state: "directory"
+    recurse: "yes"
+    follow: no
+  when: webapp_symlink_source_on_host is undefined or not webapp_symlink_source_on_host and (not is_clustered_storage_var_www or cluster_master is defined)
+  ignore_errors: true # will fail is cache or other subfolders are mounted on nfs shares
+
+- name: Make specified dirs writeable by all
+  tags: [ 'always' ]
+  file: path={{ www_root}}/{{ webapp }}/{{item}} owner={{ web_user }} group={{ web_group }} mode=0777 state=directory recurse=yes
+  with_items:
+    "{{webapp_writable_dirs}}"
+  when: webapp_symlink_source_on_host is undefined or not webapp_symlink_source_on_host and webapp_writable_dirs is defined and webapp_writable_dirs[0] is defined and (not is_clustered_storage_var_www or cluster_master is defined)
+  ignore_errors: true #when cache is a link/mount this gives error!
+
+- name: delete previous saved post install script
+  tags: [ 'always' ]
+  file:
+    path: /root/{{webapp}}/post_install.sh
+    state: absent
+
+- name: save post install script (for debugging & manual running)
+  tags: [ 'always' ]
+  lineinfile:
+    dest: /root/{{webapp}}/post_install.sh
+    line: "{{webapp_post_install_script}}"
+    create: true
+
+- name: delete directories to be ALWAYS mounted on nfs servers
+  tags: [ 'always' ]
+  file:
+    path: "{{item.local_path_full}}"
+    state: absent
+    recurse: no
+  with_items:
+    "{{webapp_nfs_mounts_always}}"
+  ignore_errors: true #as it may already be mounted so will give error
+
+- name: mount directories to be ALWAYS mounted on nfs servers
+  tags: [ 'always' ]
+  mount:
+    src: "{{item.mount_path_full}}"
+    name: "{{item.local_path_full}}"
+    state: mounted
+    fstype: "{{item.fstype}}"
+  with_items:
+    "{{webapp_nfs_mounts_always}}"
+  ignore_errors: true #as it may already be mounted so will give error
+
+- name: delete directories to be mounted on nfs servers on CLUSTERED file systems only
+  tags: [ 'always' ]
+  file:
+    path: "{{item.local_path_full}}"
+    state: absent
+    recurse: no
+  with_items:
+    "{{webapp_nfs_mounts_if_clustered_www}}"
+  when: is_clustered_storage_var_www
+  ignore_errors: true #as it may already be mounted so will give error
+
+- name: mount directories to be mounted on nfs servers on CLUSTERED file systems only
+  tags: [ 'always' ]
+  mount:
+    src: "{{item.mount_path_full}}"
+    name: "{{item.local_path_full}}"
+    state: mounted
+    fstype: "{{item.fstype}}"
+  with_items:
+    "{{webapp_nfs_mounts_if_clustered_www}}"
+  when: is_clustered_storage_var_www
+  ignore_errors: true #as it may already be mounted so will give error
+
+- name: Run post install script
+  tags: [ 'always' ]
+  shell: "bash {{item}}"
+  with_items:
+   - "/root/{{webapp}}/post_install.sh"
+  when:  (not is_clustered_storage_var_www or cluster_master is defined)
+
+#check with crontab -e
+- name: set up {{ webapp }} specified cron job
+  tags: [ 'always' ]
+  cron: name="{{item.name}}" minute="{{item.minute}}" job="{{item.job}}"
+  with_items:
+    webapp_cron_jobs
+  when: webapp_cron_jobs is defined and webapp_cron_jobs[0] is defined and (not is_part_of_cluster or cluster_master)
+
+- name: ensure mysql root userr has permissions - else we get error on importing dump The user specified as a definer ('root'@'%') does not exist
+  tags: [ 'always' ]
+  mysql_user:
+    name: root
+    host: "{{ item }}"
+    login_port:  "{{db.mysql_listen_port}}"
+    password: "{{db.root_pass}}"
+    login_user: root
+    login_password: "{{db.root_pass}}"
+    check_implicit_admin: yes
+    priv: "*.*:ALL,GRANT"
+  with_items:
+    "{{db.allow_remote_connect_from}}"
+  when: not is_clustered_db  or cluster_master is defined
+  ignore_errors: yes #in case password was already changed   
+
+- name: "Drop Old Database {{ webapp_db_name }}"
+  tags: [ install_packages ]
+  mysql_db: 
+    name: "{{ webapp_db_name }}" 
+    state: absent
+    login_user: root
+    login_password: "{{ db.root_pass }}"
+    login_host: "{{ lb.internal_bind_address }}"
+    login_port: "{{db.mysql_listen_port}}"
+  when: (not is_clustered_db or cluster_master is defined) and (webapp_db_dump_file != "" and not webapp_skip_db_import)
+
+- name: "Provision Database {{ webapp_db_name }}"
+  tags: [ install_packages ]
+  mysql_db: 
+    name: "{{ webapp_db_name }}" 
+    state: present
+    login_user: root
+    login_password: "{{ db.root_pass }}"
+    login_host: "{{ lb.internal_bind_address }}"
+    login_port: "{{db.mysql_listen_port}}"
+    encoding: utf8
+  when: (not is_clustered_db or cluster_master is defined) and (webapp_db_dump_file != "" and not webapp_skip_db_import)
+  
+# use ansible module to ensure import does not fail silently!
+- name: "Import Dump File {{ webapp_db_name }} < {{ www_root}}/{{ webapp }}{{webapp_db_dump_file}}"
+  tags: [ install_packages ]
+  mysql_db: 
+    name: "{{ webapp_db_name }}" 
+    state: import
+    target: "{{ www_root}}/{{ webapp }}{{webapp_db_dump_file}}"
+    login_user: root
+    login_password: "{{ db.root_pass }}"
+    login_host: "{{ lb.internal_bind_address }}"
+    login_port: "{{db.mysql_listen_port}}"
+  when: (not is_clustered_db or cluster_master is defined) and (webapp_db_dump_file != "" and not webapp_skip_db_import)
+    
+- name: "Grant {{ webapp }} users access to {{ webapp_db_name }}.*:ALL"
+  tags: [ 'always' ]
+  mysql_user: 
+    name: "{{ webapp_db_user_name }}" 
+    priv: "{{ webapp_db_name }}.*:ALL" 
+    host: "{{ item }}" 
+    password: "{{ webapp_db_user_password }}"
+    state: present
+    login_user: root
+    login_password: "{{ db.root_pass }}"
+    login_host: "{{ lb.internal_bind_address }}"
+    login_port: "{{db.mysql_listen_port}}"
+  with_items:
+     "{{db.allow_remote_connect_from}}"
+  when: (not is_clustered_db or cluster_master is defined) and (webapp_db_dump_file != "" and not webapp_skip_db_import)
+    
+- name: "Grant {{ webapp_db_user_name }} SUPER access"
+  tags: [ 'always' ]
+  mysql_user: 
+    name: "{{ webapp_db_user_name }}" 
+    priv: "*.*:ALL" 
+    host: "{{ item }}" 
+    password: "{{ webapp_db_user_password }}"
+    state: present
+    login_user: root
+    login_password: "{{ db.root_pass }}"
+    login_host: "{{ lb.internal_bind_address }}"
+    login_port: "{{db.mysql_listen_port}}"
+  with_items:
+     "{{db.allow_remote_connect_from}}"
+  when: (not is_clustered_db or cluster_master is defined) and (webapp_db_dump_file != "" and not webapp_skip_db_import)

@@ -1,0 +1,17 @@
+- name: install vagrant provider plugins
+  shell: vagrant plugin install {{item}}
+  with_items:
+    - vagrant-libvirt
+    - vagrant-lxc
+  ignore_errors: false
+  when: vagrant_check_installed.rc is defined and vagrant_check_installed.rc == 1     
+  
+# vagrant lxc templates      
+- name: clone fgrehm/vagrant-lxc-base-boxes
+  git: "repo=git://github.com/fgrehm/vagrant-lxc-base-boxes.git dest={{vagrant_lxc_templates_home}} update=no accept_hostkey=yes depth=1"
+
+# # build lxc boxes
+# - name: build lxc boxes
+  # shell: "cd {{vagrant_lxc_templates_home}};make {{item}}"
+  # with_items:
+    # - "{{vagrant_build_lxc_boxes}}"

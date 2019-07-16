@@ -1,0 +1,34 @@
+﻿
+- name: download and run ajenti 
+  tags:  install_packages
+  shell: "curl https://raw.githubusercontent.com/ajenti/ajenti/1.x/scripts/install-rhel7.sh | sh"
+
+- name: open firewall ports
+  tags: ['always']
+  shell: "firewall-cmd --permanent --zone=public --add-port=8000/tcp;
+          firewall-cmd --reload;"
+  when: false and firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6  #we use nginx reverse proxy with ssh as ajenti is not working with ssl on centos7
+  
+- name: adjust ajenti.conf
+  replace:
+    dest: /etc/ajenti/config.json
+    regexp: "{{item.regex}}"
+    replace: "{{item.replace}}"
+    backup: yes
+    create: yes
+  with_items:
+    - {name: ssloff, regex: '"enable": true', replace: '"enable": false' }
+    # - {name: password, regex: "{{double_quote}}sha512.*," , replace: "{{double_quote}}sha512|{{admin_userpassword|password_hash('sha512')}}{{double_quote}}," }
+  ignore_errors: true #on clusters, ajenti.conf may not always exist
+        
+- name: restart and enable ajenti service
+  service:
+    name: ajenti
+    state: restarted
+    enabled: yes
+  ignore_errors: yes #may not get instalkled sometimes
+
+#  prefix zz to vhost file so it is not uised bu nginx by default if another more matching file exits
+- name: Set up ajenti virtual host
+  template: src=etc/nginx/conf.d/ajenti.conf dest=/etc/nginx/conf.d/zz_ajenti-{{ default_backend }}.conf owner=root group=root mode=0644
+  notify: nginx reload  

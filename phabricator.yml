@@ -1,0 +1,24 @@
+- hosts: all
+  ### remote_user: vagrant
+  serial: "{{serial_var}}"
+  #allow 2 out of 3 to fail while downloading packages to shared host directory
+  max_fail_percentage: 1
+  sudo: yes  
+   
+  vars_files:
+    - "{{pb_app_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_config_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_site_vars_file}}" #parsed from extra args in config.yml
+    
+
+   
+  vars:
+    - is_initial_run: true
+       
+  
+  roles:
+    - handlers
+    # - essentials
+    - phabricator
+    - diffusion_hosting
+    

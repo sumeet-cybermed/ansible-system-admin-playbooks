@@ -1,0 +1,59 @@
+---
+###########\
+
+- name: install dependencies
+  tags:  install_packages
+  apt: name={{item}} state={{installed_package_state}}
+  with_items:
+    - pkg-config
+   
+- name: check if go is downloaded already (apt)
+  tags: [ 'always' ]
+  stat: 
+    path: "/var/downloads/go/{{go_filename}}"
+  register: go_check_deb_downloaded  
+  
+- name: Download go.deb
+  tags:  install_packages
+  get_url: 
+    url="{{ go_url }}"
+    dest="/var/downloads/go/{{go_filename}}"
+  when:  not go_check_deb_downloaded.stat.exists
+  
+- name: Install go 
+  tags:  install_packages
+  shell: "tar -C {{go_home_up}} -xzf /var/downloads/go/{{go_filename}}"
+
+- name: create gopath  dir
+  tags: [ 'always' ]
+  file: 
+    path: "{{go_path}}"
+    state: directory
+  
+- name: Check whether line has been added to file already!
+  tags: [ 'always' ]
+  shell: grep -Fxq "{{ go_set_env[:40]}}" /etc/environment
+  register: lineexists
+  always_run: True
+  ignore_errors: True
+  changed_when: False
+  
+- debug: var=lineexists  
+
+- name: set go paths
+  lineinfile:
+    line: "{{go_set_env}}"
+    dest: "/etc/environment"
+    state: present
+  ignore_errors: true  
+  when: lineexists.rc != 0
+  
+  
+- name:  export go env
+  shell: "{{go_export_env}}"
+
+- name: create symlink for go binary
+  file: 
+    src: "{{go_bin}}"
+    dest: "/usr/local/bin/go"
+    state: link

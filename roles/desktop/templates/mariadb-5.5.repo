@@ -1,0 +1,7 @@
+# MariaDB 5.5 RedHat repository list - created 2015-08-09 09:14 UTC
+# http://mariadb.org/mariadb/repositories/
+[mariadb]
+name = MariaDB
+baseurl = http://yum.mariadb.org/5.5/rhel{{ ansible_distribution_major_version }}-amd64
+gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+gpgcheck=1

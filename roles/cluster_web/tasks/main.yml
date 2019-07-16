@@ -1,0 +1,18 @@
+---
+- name: install packages
+  tags:  install_packages
+  yum: name={{ item }} state={{installed_package_state}}
+  with_items:
+    - nginx
+    - php-fpm
+
+
+- name: set up nginx.conf
+  template: src=nginx.conf dest=/etc/nginx/nginx.conf
+  notify: restart nginx 
+
+- name: enable nginx and php-fpm
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - nginx
+    - php-fpm

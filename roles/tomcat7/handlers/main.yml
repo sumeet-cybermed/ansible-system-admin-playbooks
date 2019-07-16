@@ -1,0 +1,15 @@
+---
+  - name: restart tomcat
+    service: name=tomcat7 state=restarted
+    when: "ansible_pkg_mgr == 'apt'"  
+    # when: not_ami_build
+
+  - name: restart tomcat
+    service: name=tomcat state=restarted
+    when: "ansible_pkg_mgr == 'yum'"  
+    # when: not_ami_build
+
+  - name: run rc.local
+    command: /etc/rc.local
+    # when: not_ami_build
+    

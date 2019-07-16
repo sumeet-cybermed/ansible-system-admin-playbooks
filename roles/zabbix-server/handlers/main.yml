@@ -1,0 +1,6 @@
+---
+# handlers file for wdijkerman.zabbix
+
+- name: zabbix-server restarted
+  shell: systemctl reset-failed zabbix-server; systemctl enable zabbix-server;systemctl restart zabbix-server;systemctl status zabbix-server;
+  ignore_errors: true

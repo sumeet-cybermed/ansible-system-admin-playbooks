@@ -1,0 +1,11 @@
+---
+
+- include: install.yml
+  tags: ['always']
+  
+- include: config.yml
+  tags: ['always']
+  
+- include: manage.yml
+  tags: ['always']
+  

@@ -1,0 +1,25 @@
+#
+# PimpMyLogs setup
+#
+- name: Ensure PML directory exists
+  file: path={{ admin_doc_root }}/logs state=directory owner={{ web_user }} group={{ web_group }}
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'pimpmylog' ]
+
+- name: ensure download dir exists
+  file: path=/var/downloads/pml state=directory 
+    
+- name: Download PML to downloads
+  tags: [ install_packages ]
+  git: repo=git://github.com/potsky/PimpMyLog.git dest=/var/downloads/pml update=no accept_hostkey=yes depth=1
+  # tags:  [ 'admin', 'pimpmylog' ]
+
+- name: Copy PML to /logs
+  shell: cp -rf /var/downloads/pml/* {{ admin_doc_root }}/logs/ 
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'pimpmylog' ]
+  
+- name: Configure PML
+  template: src=pimpmylog.config.user.php dest={{ admin_doc_root }}/logs/config.user.php group={{ web_group }} owner={{ web_user }} mode=0444
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'pimpmylog' ]

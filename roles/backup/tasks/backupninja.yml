@@ -1,0 +1,87 @@
+---
+##
+# backup to S3
+#
+# ref:
+# https://github.com/zertrin/duplicity-backup
+# http://grysz.com/2011/04/04/configure-amazon-s3-backup-with-backupninja-and-duplicity/
+#
+- debug:
+    msg: "{{item}}"
+  with_items:
+    - "backup_schedules: {{backup_schedules}}"
+  ignore_errors: true
+  tags: ['always']
+
+- name: "Create Backup Group"
+  group: name={{ backup_groupname }}  gid={{backup_groupid}} state=present
+
+- name: "Ensure Home Dirs Exist"
+  file: path={{ item }} state=directory 
+  with_items:
+    - "{{backup_userhomepath}}"
+  
+- name: "Create Backup user"
+  user: name={{backup_username }} uid={{backup_userid }} comment="{{ backup_usercomment }}" group={{ backup_groupname}} password={{ backup_userpassword }} state=present createhome=true home={{ backup_userhomepath }} update_password=always
+  
+- name: "Ensure Home Dirs Permissions"
+  file: path={{ item }} state=directory owner={{backup_username }}  group={{ backup_groupname}}
+  with_items:
+    - "{{backup_userhomepath}}"
+  
+- name: "Ensure Backup Dir Exists "
+  file: path={{ item }}  state=directory  owner={{backup_username}} group={{ backup_groupname}}
+  with_items:
+    - "{{backup_dir_root}}"
+    - "{{backup_dir_mysql}}"
+    - "{{backup_dir_rdiff}}"
+    - "{{backup_dir_xtrabackup}}"  
+    - "{{restore_dir_root}}"
+    - "{{restore_dir_mysql}}"
+    - "{{restore_dir_rdiff}}"
+    - "{{restore_dir_xtrarestore}}" 
+    - "{{backup_final_remote_host_dir_rdiff}}"
+    - /var/lib/backupninja
+    
+- name: backup pkgs
+  yum: pkg="{{ item }}" state={{installed_package_state}}
+  tags:  install_packages
+  with_items:
+    - backupninja
+    - rdiff-backup
+    - "perl(DBD::mysql)"
+
+#- name: install percona repo
+#  yum: pkg="{{ item }}" state={{installed_package_state}}
+#  tags:  install_packages
+#  with_items:
+#    - "http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm"
+#  when: false #causes incompatibility with mariadb10.x
+
+- name: backup pkgs
+  yum: pkg="{{ item }}" state={{installed_package_state}}
+  tags:  install_packages
+  with_items:
+    - percona-xtrabackup #causes conflicts when installing mariadb
+    - s3cmd
+  when: false #causes incompatibility with mariadb10.x
+    
+- name: backupninja - local destination
+  template: src="{{ item.name }}" dest="{{ item.dest }}" owner=root group=root mode={{ item.mode }} force=yes
+  # tags:  backup
+  with_items:
+    - {name: usr/share/backupninja/xtrabackup, mode: 600, dest: /usr/share/backupninja/xtrabackup}
+    - {name: etc/backupninja.conf, mode: 600, dest: /etc/backupninja.conf}
+    - {name: etc/backup.d/20.mysql, mode: 600, dest: /etc/backup.d/20.mysql}
+    - {name: etc/backup.d/22.xtrabackup, mode: 600, dest: /etc/backup.d/22.xtrabackup}
+    - {name: etc/backup.d/30.rdiff, mode: 600, dest: /etc/backup.d/30.rdiff}
+    - {name: root/.my.cnf, mode: 600, dest: /root/.my.cnf }
+    - {name: root/.my.cnf, mode: 600, dest: /root/xtrabackup.my.cnf } #extra file as backupninja renames -root/.my.cnf 
+  when: (not is_part_of_cluster or cluster_master is defined)
+    
+- name: backupninja - remote destination
+  template: src="{{ item.name }}" dest="{{ item.dest }}" owner=root group=root mode={{ item.mode }} force=yes
+  # tags:  backup
+  with_items:
+    - {name: etc/backup.d/90-remote.rdiff, mode: 600, dest: /etc/backup.d/90-remote.rdiff}
+  when: (not is_part_of_cluster or cluster_master is defined) and backup_final_remote_host != ''

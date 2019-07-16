@@ -1,0 +1,36 @@
+# ---
+- name: install vncserver
+  tags:  install_packages
+  yum: name={{item}} state={{installed_package_state}}
+  with_items:
+    - tigervnc-server
+  ignore_errors: true
+  when: "ansible_pkg_mgr == 'yum'"    
+  
+- name: copy vncserver service
+  shell: "cp -f /lib/systemd/system/vncserver@.service /etc/systemd/system/vncserver1.service"
+  when: "ansible_pkg_mgr == 'yum'"    
+  
+- name: template vncserver service
+  replace:
+    dest: /etc/systemd/system/vncserver1.service
+    regexp: "{{item.regexp}}"
+    replace: "{{item.replace}}"
+    backup: yes
+  with_items:
+    - {regexp: "%i", replace: "1"}
+    - {regexp: "<USER>", replace: "{{admin_username}}" }
+  when: "ansible_pkg_mgr == 'yum'"    
+    
+- name: set user passwd
+  shell: echo "{{admin_userpassword}}\n{{admin_userpassword}}\n\n" | vncpasswd
+  sudo: "{{admin_username}}" 
+  when: "ansible_pkg_mgr == 'yum'"    
+  
+- name: enable vnc service
+  service: name=vncserver1 state=restarted enabled=yes
+  when: "ansible_pkg_mgr == 'yum'"
+  
+  
+
+

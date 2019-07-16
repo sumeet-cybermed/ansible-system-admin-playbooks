@@ -1,0 +1,52 @@
+{
+  "dummy_123": {
+    "master": {
+      "master_0": {
+        "host": "dummy"
+      }
+    },
+    "slave": {
+      "slave_0": {
+        "host": "dummy"
+      }
+    }
+  },
+  "haproxy_block_BEGIN": {
+    "master": {
+      "master_0": {
+        "host": "haproxy_block_BEGIN"
+      }
+    },
+    "slave": {
+      "slave_0": {
+        "host": "haproxy_block_BEGIN"
+      }
+    }
+  },
+  "10.10.10.200": {
+    "master": {
+      "master_0": {
+        "host": "10.10.10.200",
+        "port": "3306"
+      }
+    },
+    "slave": {
+      "slave_0": {
+        "host": "10.10.10.200",
+        "port": "3307"
+      }
+    }
+  },
+  "haproxy_block_END": {
+    "master": {
+      "master_0": {
+        "host": "haproxy_block_END"
+      }
+    },
+    "slave": {
+      "slave_0": {
+        "host": "haproxy_block_END"
+      }
+    }
+  }
+}

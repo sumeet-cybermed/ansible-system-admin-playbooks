@@ -1,0 +1,6 @@
+[ajenti]
+name=Ajenti
+baseurl=http://repo.ajenti.org/ng/centos/$releasever/$basearch/
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-ajenti-packagers
+

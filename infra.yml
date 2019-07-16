@@ -1,0 +1,114 @@
+- name: set up common configuration
+  hosts: all
+  ### remote_user: vagrant
+  serial: "{{serial_var}}"
+  #allow 2 out of 3 to fail while downloading packages to shared host directory
+  max_fail_percentage: 1
+  sudo: yes  
+    
+  vars:
+  - is_initial_run: true
+  - install_ajenti:   false
+  - install_redisadmin:   false
+  - install_pml:   false
+  - install_phpmyadmin:   true
+  - install_phpmemcachedadmin:   false
+  - install_mailhog:   true
+  - install_xhprof: true
+
+  vars_files:
+    - "{{pb_app_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_config_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_site_vars_file}}" #parsed from extra args in config.yml
+
+  pre_tasks:
+
+#    - name: take out of load balancer pool
+#      command: /usr/bin/take_out_of_pool {{ inventory_hostname }}
+#      delegate_to: 127.0.0.1
+
+  roles:
+    - {
+      role: upgrade_distrib,
+      when: upgrade_distrib_to_latest is defined and upgrade_distrib_to_latest
+    }
+    - handlers
+    - debugging
+    - core
+    - essentials
+    - htpasswd
+    - openssl
+    - nfs
+    - docker
+    - cluster_db #install before php to avoid package conflicts
+    - cluster_redis
+    - {
+        role: cluster_storage,
+        when: is_cluster and is_part_of_cluster
+      }
+    - nginx
+    - common
+    - php-fpm
+    - php7-fpm
+    #- hhvm
+    - {
+            role: cluster_haproxy,
+            when: is_cluster and is_part_of_cluster
+      }
+    - {
+            role: cluster_maxscale,
+            when: is_cluster and is_part_of_cluster and cluster_db_loadbalancer == 'maxscale'
+      }
+    - backup
+    - development_host_and_user
+    - {
+        role: xhprof,
+        when: install_xhprof
+      }
+    - {
+        role: zabbix-server,
+        when: is_server_monitor and install_zabbix
+      }
+    - {
+          role: grafana,
+          when: is_server_monitor and install_grafana
+      }
+    - {
+        role: cluster_control_docker,
+        when: is_cluster_controller and install_cluster_control
+       }
+    - {
+        role: zabbix-agent,
+        when: True and install_zabbix
+     }
+    - admin
+    - final-check
+    - passwords
+
+#    - {
+#        role: graphite,
+#        when: is_server_monitor and install_graphite
+#      }
+#    - {
+#        role: prometheus,
+#        prometheus_components: [ "prometheus", "node_exporter", "mysqld_exporter", "alertmanager" ],
+#        when: is_server_monitor  and install_prometheus
+#      }
+#    - {
+#        role: prometheus,
+#        prometheus_components: [ "node_exporter", "mysqld_exporter" ],
+#        when: not is_server_monitor and install_prometheus
+#      }
+#    - {
+#        role: munin,
+#        when: True and install_munin
+#       }
+
+  tasks:
+
+  post_tasks:
+
+#    - name: add back to load balancer pool
+#      command: /usr/bin/add_back_to_pool {{ inventory_hostname }}
+#      delegate_to: 127.0.0.1
+#

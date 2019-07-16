@@ -1,0 +1,17 @@
+---
+- debug:
+    msg: "{{item}}"
+  with_items:
+    - "redis_listen_port: {{redis_listen_port}}"
+    - "redis_listen_address: {{redis_listen_address}}"
+    - "redis_sentinel: {{redis_sentinel}}"
+    - "redis_slaveof: {{redis_slaveof}}"
+    - "redis_sentinel_monitors: {{redis_sentinel_monitors}}"
+  tags: always
+  ignore_errors: true
+
+- include: install.yml
+
+- include: server.yml
+
+- include: local_facts.yml

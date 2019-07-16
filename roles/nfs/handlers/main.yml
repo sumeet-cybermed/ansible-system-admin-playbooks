@@ -1,0 +1,6 @@
+---
+ - name: Restart NFS
+   shell: exportfs -r
+        
+  
+  

@@ -1,0 +1,98 @@
+---
+###########
+- name: Enable HHVM repo key (apt)
+  apt_key: url=http://dl.hhvm.com/conf/hhvm.gpg.key state=present
+  when: "ansible_pkg_mgr=='apt'"  
+  
+- name: Enable HHVM repo (apt)
+  apt_repository: repo="deb http://dl.hhvm.com/{{ ansible_distribution|lower}} {{ ansible_lsb.codename }} main" state=present update_cache=yes 
+  when: "ansible_pkg_mgr=='apt'"  
+
+- name: Install HHVM  (apt)
+  action: "{{ ansible_pkg_mgr }} name=hhvm state=present"
+  tags:  install_packages
+  when: "ansible_pkg_mgr == 'apt'"
+
+###########  
+- name: Install the ulypaoth repo (yum)
+  tags:  install_packages
+  shell: "yum install -y https://downloads.ulyaoth.net/rpm/ulyaoth-latest.{{ ansible_distribution|lower}}.noarch.rpm"
+  when: "ansible_pkg_mgr == 'yum' and yum_hhvm_repo=='ulyaoth'"
+  ignore_errors: yes 
+  
+- name: Install hhvm from ulyaoth (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}}"
+  with_items:
+    - epel-release
+    - ulyaoth-hhvm-lts-3.18
+  when: "ansible_pkg_mgr == 'yum' and yum_hhvm_repo=='ulyaoth'"
+  ignore_errors: yes #hhvm is eperimental in rhel
+  
+  ###########
+ 
+- name: "Ensure Dir Exists /etc/hhvm"
+  file: path=/etc/hhvm state=directory owner={{web_user}} group={{web_group}}
+  sudo: yes
+  ignore_errors: yes #hhvm is eperimental in rhel
+        
+          
+# only needed in centos to fix php file and run as user
+- name: copy /etc/systemd/system/hhvm.service 
+  template: src=etc/systemd/system/hhvm.service dest=/usr/lib/systemd/system/hhvm.service owner=root group=root mode=0644
+  when: "ansible_pkg_mgr == 'yum' and (yum_hhvm_repo=='ulyaoth' or yum_hhvm_repo=='epel')"
+  tags: always
+  ignore_errors: yes #hhvm is eperimental in rhel
+  
+- name: Do /etc/hhvm/server.ini
+  template: src=etc/hhvm/server.ini dest=/etc/hhvm/server.ini owner=root group=root mode=0644
+  tags: always
+  ignore_errors: yes #hhvm is eperimental in rhel
+  
+- name: remove /etc/hhvm/php.ini
+  file: path=/etc/hhvm/php.ini state=absent
+  tags: always
+  ignore_errors: yes #hhvm is eperimental in rhel
+
+- name: "Ensure Dir Exists /var/run/hhvm and is writable to by hhvm"
+  file: path=/var/run/hhvm state=directory owner={{web_user}} group={{web_group}}
+  ignore_errors: yes #hhvm is eperimental in rhel
+
+- name: add hhvm to web_group
+  user: name=hhvm group={{web_group}} append=yes
+  ignore_errors: yes #hhvm is eperimental in rhel
+
+- name: ensure /var/run/hhvm/ directory is created at each boot!
+  lineinfile: 
+    dest: "{{user_system_scripts_directory}}/01_run_on_boot.sh"
+    line: "mkdir -p /var/run/hhvm/; chown -Rf {{web_user}}:{{web_group}} /var/run/hhvm/; service hhvm restart;service hhvm status; netstat -apnl | grep hhvm;"
+    state: present
+    create: true
+  ignore_errors: yes #hhvm is eperimental in rhel
+
+- name: Ensure HHVM is running
+  service: name=hhvm state=restarted enabled=yes
+  when: "ansible_pkg_mgr == 'apt'"
+  ignore_errors: yes #hhvm is eperimental in rhel
+  
+- name: Restart HHVM using service (yum)
+  service: name=hhvm state=restarted enabled=yes
+  when: "ansible_pkg_mgr == 'yum'"  
+  ignore_errors: yes #hhvm is experimental in rhel
+  
+- name: Restart HHVM using shell - so dirs will be created
+  shell: service hhvm restart
+  ignore_errors: yes #hhvm is experimental in rhel  
+ 
+- name: wait for hhvm to start
+  wait_for: 
+    path:  /var/run/hhvm/hhvm.sock
+    state: present
+    host: "{{ ansible_ssh_host | default(inventory_hostname) }}"
+    delay: 1
+    timeout: 5
+  ignore_errors: yes
+    
+- name: check hhvm status
+  shell: netstat -apnl | grep hhvm
+  ignore_errors: yes

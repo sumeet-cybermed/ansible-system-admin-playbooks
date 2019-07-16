@@ -1,0 +1,9 @@
+---
+##
+##no cron for testing sites
+webapp_cron_jobs:
+external_ip_address: "{{ansible_eth0.ipv4.address}}"
+
+
+
+  

@@ -1,0 +1,8 @@
+---
+- name: restart redis
+  service: name={{redis_service_name}} state=restarted enabled=yes
+  when: redis_as_service
+
+- name: restart sentinel
+  service: name={{redis_sentinel_service_name}} state=restarted enabled=yes
+  when: redis_as_service

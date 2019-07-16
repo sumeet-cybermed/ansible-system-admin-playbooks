@@ -1,0 +1,61 @@
+---
+- name: download and create container - {{mongo_db_docker_container_name}}
+  tags:
+    - install_packages
+  docker_container:
+      name: "{{mongo_db_docker_container_name}}"
+      image: "{{mongo_db_docker_image_name}}"
+      memory_reservation: 2048MB
+      keep_volumes: yes #retain volumes associated with a removed container.
+      restart_policy: "no" #do not restart - we use a service wrapper
+      recreate: no #do not recreate if present
+#      ignore_image: True #ignore image version - only from v2.2
+      state: present #create if not present
+      pull: no #only pull an image when missing.
+      tty: yes #Allocate a psuedo-TTY.
+      trust_image_content: yes #skip image verification.
+      hostname: "{{mongo_db_docker_container_name}}"
+      etc_hosts: {}
+      #volumes_from seems to be very slow - commented out
+      volumes_from: #List of container names or Ids to get volumes from
+        - "{{docker_data_only_container_name}}"
+      published_ports:
+        - 127.0.0.1:{{mongo_db_docker_container_published_mongo_db_port}}:27017  #http
+
+- name: Install {{mongo_db_docker_container_name}} systemd script
+  tags:
+    - always
+  template: src=mongo_db_docker_container_name.service dest=/etc/systemd/system/{{mongo_db_docker_container_name}}.service
+
+- name: start {{mongo_db_docker_container_name}} - docker
+  tags:
+    - always
+  shell: docker start {{mongo_db_docker_container_name}}
+
+
+- name: start {{mongo_db_docker_container_name}}
+  tags:
+    - always
+  service: name={{mongo_db_docker_container_name}}.service state=started
+
+- name: Wait for the docker container to start
+  wait_for:
+      port:  "{{mongo_db_docker_container_published_mongo_db_port}}"
+      host: 127.0.0.1
+      state: started
+      delay: 1
+      timeout: 20
+  ignore_errors: yes
+  tags:
+    - always
+
+- name: register ip addr of docker container
+  shell: docker inspect -f {% raw %} '{{ .NetworkSettings.IPAddress }}' {% endraw %}{{mongo_db_docker_container_name}}
+  register: container_ip_addr_result
+  tags:
+      - always
+
+- name: debug facts
+  debug: msg="{{item}}"
+  with_items:
+    - "container_ip_addr_result: {{container_ip_addr_result.stdout}}"

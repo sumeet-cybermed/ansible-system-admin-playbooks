@@ -1,0 +1,18 @@
+---
+- name: Create install location for WP-CLI
+  file: dest=/usr/share/wp-cli mode=755 owner=root group=root state=directory
+  
+- name: ensure download dir exists
+  file: path=/var/downloads/wp-cli state=directory 
+
+- name: Download WP-CLI
+  get_url: url=https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar dest=/var/downloads/wp-cli/wp-cli.phar force=no
+  
+- name: Install WP-CLI
+  command: curl file:///var/downloads/wp-cli/wp-cli.phar -o /usr/share/wp-cli/wp
+
+- name: Set execute bits on WP-CLI
+  file: path=/usr/share/wp-cli/wp mode=0755
+
+- name: Symlink WP-CLI
+  file: dest=/usr/local/bin/wp src=/usr/share/wp-cli/wp state=link force=yes

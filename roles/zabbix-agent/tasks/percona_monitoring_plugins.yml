@@ -1,0 +1,33 @@
+---
+
+- name: install percona yum repo
+  yum:
+    name: http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm
+    state: present
+    disable_gpg_check: yes
+  tags:
+      - install_packages
+
+- name: install Percona Monitoring Plugins for Zabbix
+  yum:
+    name: percona-zabbix-templates
+    state: present
+    disable_gpg_check: yes
+  tags:
+      - install_packages
+
+- name: copy Percona Monitoring Plugins for Zabbix to agent conf.d
+  shell: rm -f /etc/zabbix/zabbix_agentd.d/userparameter_percona_mysql.conf; cp -f /var/lib/zabbix/percona/templates/userparameter_percona_mysql.conf /etc/zabbix/zabbix_agentd.d/userparameter_percona_mysql.conf
+
+- name: Percona Monitoring Plugins - ensure agent can communicate with mysql on its own node
+  template: src=ss_get_mysql_stats.php.cnf
+              dest=/var/lib/zabbix/percona/scripts/ss_get_mysql_stats.php.cnf
+
+- name: Percona Monitoring Plugins - test connectivity
+  shell: "sudo -u zabbix -H /var/lib/zabbix/percona/scripts/get_mysql_stats_wrapper.sh running-slave;"
+  ignore_errors: true
+
+- name: Percona Monitoring Plugins - test connectivity
+  shell: "echo 'Above command Should return 0 or 1 but not the “Access denied” error.'"
+  ignore_errors: true
+

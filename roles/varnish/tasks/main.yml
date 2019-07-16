@@ -1,0 +1,37 @@
+---
+- name: Fill the varnish GPG Key
+  apt_key: data="{{ lookup('file', '../templates/varnish-cache.gpg.key') }}"
+  when: "ansible_pkg_mgr=='apt' and (ansible_os_family != 'Debian')"    
+  
+- name: Add the varnish cache repo file
+  apt_repository: repo='deb http://repo.varnish-cache.org/{{ ansible_distribution|lower}}/ {{ ansible_lsb.codename }} varnish-{{ varnish_version }}' state=present update_cache=yes
+  when: "ansible_pkg_mgr=='apt' and (ansible_os_family != 'Debian')"    
+
+- name: Install Varnish
+  action: "{{ ansible_pkg_mgr }} name=varnish state=present"
+  tags:  install_packages
+
+- name: Ensure varnish default.vcl
+  template: src=etc/varnish/default.vcl dest=/etc/varnish/default.vcl owner=root group=root mode=0644
+  # when: "ansible_pkg_mgr=='apt'"      
+  
+# - name: Ensure varnish default.vcl
+  # template: src=etc/varnish/default.vcl.centos7 dest=/etc/varnish/default.vcl owner=root group=root mode=0644
+  # when: "ansible_pkg_mgr=='yum'"      
+  
+- name: Ensure varnish config
+  template: src=etc/default/varnish dest=/etc/default/varnish owner=root group=root mode=0644
+  when: "ansible_pkg_mgr=='apt'"    
+    
+- name: Ensure varnish config on centos7+
+  template: src=etc/varnish/varnish.params dest=/etc/varnish/varnish.params owner=root group=root mode=0644
+  
+- name: Enable NCSA-style logging
+  template: src=etc/default/varnishncsa dest=/etc/default/varnishncsa owner=root group=root mode=0644
+  notify: varnishncsa reload
+  
+- name: enable autostart of varnish
+  service: name=varnish enabled=true state=restarted
+  ignore_errors: true
+  
+    

@@ -1,0 +1,72 @@
+---
+- name: download and create container - {{rocket_chat_docker_container_name}}
+  tags:
+    - install_packages
+  docker_container:
+      name: "{{rocket_chat_docker_container_name}}"
+      image: "{{rocket_chat_docker_image_name}}"
+      memory_reservation: 2048MB
+      keep_volumes: yes #retain volumes associated with a removed container.
+      restart_policy: "no" #do not restart - we use a service wrapper
+      recreate: no #do not recreate if present
+#      ignore_image: True #ignore image version - only from v2.2
+      state: present #create if not present
+      pull: no #only pull an image when missing.
+      tty: yes #Allocate a psuedo-TTY.
+      trust_image_content: yes #skip image verification.
+      hostname: "{{rocket_chat_docker_container_name}}"
+      etc_hosts: {}
+      #volumes_from seems to be very slow - commented out
+      volumes_from: #List of container names or Ids to get volumes from
+        - "{{docker_data_only_container_name}}"
+      links:
+        - "{{mongo_db_docker_container_name}}:db"
+      published_ports:
+        - 127.0.0.1:{{rocket_chat_docker_container_published_http_port}}:3000 #http
+#        - 127.0.0.1:{{rocket_chat_docker_container_published_https_port}}:3000 #https
+#        - 0.0.0.0:51022:22 #ssh
+
+- name: Install {{rocket_chat_docker_container_name}} systemd script
+  tags:
+    - always
+  template: src=rocket_chat_docker_container_name.service dest=/etc/systemd/system/{{rocket_chat_docker_container_service_name}}.service
+
+- name: start {{rocket_chat_docker_container_name}} - docker
+  tags:
+    - always
+  shell: docker start {{rocket_chat_docker_container_name}}
+
+
+- name: start and enable {{rocket_chat_docker_container_name}}
+  tags:
+    - always
+  service: name={{rocket_chat_docker_container_service_name}} state=started enabled=yes
+
+- name: Wait for the docker container to start
+  wait_for:
+      port:  "{{rocket_chat_docker_container_published_http_port}}"
+      host: 127.0.0.1
+      state: started
+      delay: 1
+      timeout: 20
+  ignore_errors: yes
+  tags:
+    - always
+
+- name: register ip addr of docker container
+  shell: docker inspect -f {% raw %} '{{ .NetworkSettings.IPAddress }}' {% endraw %}{{rocket_chat_docker_container_name}}
+  register: container_ip_addr_result
+  tags:
+      - always
+
+#always create nginx virtual host so we can switch fromapache to nginx even if installing from script
+- name: Configure /etc/nginx/conf.d/clustercontrol.conf
+  template: src=rc.nginx.conf dest=/etc/nginx/conf.d/rocket_chat.conf owner=root group=root mode=0644
+  notify: nginx restart
+  tags:
+    - always
+
+- name: debug facts
+  debug: msg="{{item}}"
+  with_items:
+    - "container_ip_addr_result: {{container_ip_addr_result.stdout}}"

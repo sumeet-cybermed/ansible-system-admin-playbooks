@@ -1,0 +1,45 @@
+  
+#
+# phpMyAdmin Setup
+#
+
+- name: ensure phpMyAdmin download dir exists
+  tags: [ 'always' ]
+  file:
+    path: /var/downloads/phpMyAdmin
+    state: directory
+
+- name: Download phpMyAdmin
+  tags: [ install_packages ]
+  get_url: url=https://s3-us-west-2.amazonaws.com/com.wpengine.labs-packages/phpMyAdmin-{{ phpmyadmin_version }}.zip dest=/var/downloads/phpMyAdmin/phpMyAdmin-{{ phpmyadmin_version }}.zip
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'phpmyadmin' ]
+
+- name: Copy phpMyAdmin
+  tags: [ install_packages ]
+  command: /bin/cp -rf -u /var/downloads/phpMyAdmin/phpMyAdmin-{{ phpmyadmin_version }}.zip /tmp/phpMyAdmin-{{ phpmyadmin_version }}.zip
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'phpmyadmin' ]
+  
+- name: Extract phpMyAdmin
+  tags: [ install_packages ]
+  unarchive: src=/tmp/phpMyAdmin-{{ phpmyadmin_version }}.zip dest=/tmp copy=no owner={{ web_user }} group={{ web_group }} creates=/tmp/phpMyAdmin-{{ phpmyadmin_version }}
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'phpmyadmin' ]
+
+- name: Ensure phpMyAdmin directory exists
+  tags: [ install_packages ]
+  file: path={{ admin_doc_root }}/phpmyadmin state=directory owner={{ web_user }} group={{ web_group }}
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'phpmyadmin' ]
+
+- name: Sync phpMyAdmin
+  tags: [ install_packages ]
+  shell: cp -rf /tmp/phpMyAdmin-{{ phpmyadmin_version }}/* {{ admin_doc_root }}/phpmyadmin/ 
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'phpmyadmin' ]
+
+- name: Configure phpMyAdmin
+  template: src=phpmyadminconfig.php dest={{ admin_doc_root }}/phpmyadmin/config.inc.php group={{ web_group }} owner={{ web_user }}
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  ['admin', 'phpmyadmin' ]

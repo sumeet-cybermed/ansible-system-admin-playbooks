@@ -1,0 +1,41 @@
+# ---
+# - {
+   # role: database, 
+   # db_type: mysql, 
+   # db_variant: mysql}
+
+  # #jdk for apt - use recommeded oracle-jdk as available
+# - {
+   # role: geerlingguy.java, 
+   # when: "oscar_major_version < 15  and ansible_pkg_mgr == 'apt'", 
+   # java_packages: [oracle-java6-installer,   oracle-java6-set-default ]
+  # }
+   
+# - {
+   # role: geerlingguy.java, 
+   # when: "oscar_major_version >= 15 and ansible_pkg_mgr == 'apt'", 
+   # java_packages: [oracle-java7-installer,oracle-java7-set-default ]
+  # }
+
+  # #jdk for yum - oracle rpms not available - use openjdk
+# - {role: geerlingguy.java, 
+   # when: "oscar_major_version < 15  and ansible_pkg_mgr == 'yum'", 
+   # java_packages: [java-1.6.0-openjdk, java-1.6.0-openjdk-devel]
+  # }
+   
+# - {
+   # role: geerlingguy.java, 
+   # when: "oscar_major_version >= 15 and ansible_pkg_mgr == 'yum'", 
+   # java_packages: [java-1.7.0-openjdk, java-1.7.0-openjdk-devel]}
+
+  # #tomcat 
+# - {
+   # role: tomcat6, 
+   # when: "oscar_major_version < 15"
+  # }
+  
+# - {
+   # role: tomcat7, 
+   # when: "oscar_major_version >= 15"
+  # }
+

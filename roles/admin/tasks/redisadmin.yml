@@ -1,0 +1,46 @@
+﻿#
+# redisAdmin setup
+#
+- name: check if redisAdmin directory exists
+  tags: [ 'always' ]
+  stat:
+    path: "{{ admin_doc_root }}/redisadmin"
+  register: redis_git_dir
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'redisadmin' ]
+  
+- name: install redisAdmin using composer
+  tags: [ install_packages ]
+  shell: php /usr/local/bin/composer create-project -s dev erik-dubbelboer/php-redis-admin {{ admin_doc_root }}/redisadmin
+  ignore_errors: true
+  when: (not is_clustered_storage_var_www or cluster_master is defined) and not redis_git_dir.stat.exists
+  
+- name: copy redis basic-stats.php
+  tags: [ install_packages ]
+  template:
+    src: redis-basic-stats.php
+    dest: "{{ admin_doc_root }}/redisadmin/redis-basic-stats.php"
+  ignore_errors: true
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+    
+- name: install ruby
+  yum: name=ruby state={{installed_package_state}}
+  tags:  install_packages    
+  when: ansible_pkg_mgr == 'yum' and install_redis_stat
+    
+- name: install ruby
+  apt: name=ruby state={{installed_package_state}}
+  tags:  install_packages    
+  when: ansible_pkg_mgr == 'apt' and install_redis_stat
+    
+- name: "install redis-stat [ruby based monitoring]"
+  tags:  install_packages
+  shell: "gem install redis-stat"
+  ignore_errors: false
+  when: install_redis_stat
+  
+- name: "start monitoring - point browser to <host>:63790"
+  tags: [ install_packages ]
+  shell: "echo '/usr/local/bin/redis-stat --server' to start monitoring" 
+  ignore_errors: true
+  when: install_redis_stat

@@ -1,0 +1,83 @@
+---
+#we include in case this was included manually from a tasks file
+  - name: include defaults
+    tags: ['always']
+    include_vars: ../defaults/main.yml
+    
+  # Tomcat role
+  - name: Install Apache Tomcat 7 (apt version)
+    apt: name={{ item }} state={{installed_package_state}}
+    tags:  install_packages
+    with_items:
+      - libmysql-java
+      - wkhtmltopdf
+      - tomcat7-admin 
+      - tomcat7-common 
+      - tomcat7-user 
+      - tomcat7-docs 
+      - tomcat7-examples
+      - tomcat7
+      - libtcnative-1
+      - libapr1
+    when: "ansible_pkg_mgr == 'apt'"  
+  
+  - name: Install Apache Tomcat 7 (yum version)
+    tags:  install_packages
+    yum: pkg={{ item }} state={{installed_package_state}}
+    with_items:
+      - tomcat
+      - tomcat-native
+      - tomcat-webapps 
+      - tomcat-admin-webapps 
+    when: "ansible_pkg_mgr == 'yum'"  
+    
+  - name: Symlink to /usr/local/tomcat
+    file: dest=/usr/local/tomcat state=link src=/var/lib/tomcat7 force=yes
+    when: "ansible_pkg_mgr == 'apt'" 
+  
+  - name: Symlink to /usr/local/tomcat
+    file: dest=/usr/local/tomcat state=link src=/usr/share/tomcat7 force=yes
+    when: "ansible_pkg_mgr == 'yum'"  
+  
+  # - name: Symlink Java (Debian)
+    # file: src=/usr/lib/jvm/java-7-oracle dest=/usr/lib/jvm/default-java state=link force=yes
+    # when: "ansible_pkg_mgr == 'apt'"  
+  
+  - name: Fix webapps permissions so tomcat can deploy
+    file: dest=/usr/local/tomcat/webapps state=directory owner={{ tomcat_user }}  group={{ tomcat_user }}  mode=0775
+    when: "ansible_pkg_mgr == 'apt'" 
+
+  - name: Tomcat service config (apt)
+    template: src=default dest=/etc/default/tomcat7 owner=root group=root mode=0644
+    notify: restart tomcat
+    when: "ansible_pkg_mgr == 'apt'" 
+
+  - name: Tomcat service config (yum)
+    template: src=tomcat7.conf dest=/etc/tomcat/tomcat.conf owner={{ tomcat_user_yum }}  group={{ tomcat_user_yum }}  mode=644
+    notify: restart tomcat
+    when: "ansible_pkg_mgr == 'yum'"  
+
+  - name: Copy port forwarding script
+    copy: src=port-forward-8080-to-80.sh dest=/usr/bin/port-forward-8080-to-80.sh owner=root group=root mode=0755
+    notify: run rc.local
+    when: (ansible_pkg_mgr == 'apt' and not tomcat_skip_port_forwarding)|default(False)
+    # tags:  rc
+
+  - name: stat {{rc_local_path}}    
+    tags: [ 'always' ]
+    stat: "path={{rc_local_path}}"
+    register: stat_rc_local
+    
+  - name: Add port forwarding script to rc.local
+    lineinfile: dest={{ rc_local_path }}  insertbefore="^# ADD HERE" regexp="port-forward-8080-to-80" line="/usr/bin/port-forward-8080-to-80.sh"
+    notify: run rc.local
+    when: (ansible_pkg_mgr == 'apt') and (stat_rc_local.stat.exists) and (not tomcat_skip_port_forwarding or default(False))
+    # tags:  rc
+
+  - name: Enable tomcat7 service
+    service: name=tomcat7 enabled=yes state=restarted
+    when: "ansible_pkg_mgr == 'apt'" 
+
+  - name: Enable tomcat service
+    service: name=tomcat enabled=yes state=restarted
+    when: "ansible_pkg_mgr == 'yum'"     

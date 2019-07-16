@@ -1,0 +1,3 @@
+{% from "macros/json_encode_macro" import json_encode with context -%}
+
+{{ json_encode(json_data) }}

@@ -1,0 +1,6 @@
+default_backend: php
+backend: "{{default_backend}}"
+webapp: phabricator
+webapp_extra_nginx_conf: ""
+webapp_db_user_name: phabricatord
+webapp_db_user_password: xyz123qw1

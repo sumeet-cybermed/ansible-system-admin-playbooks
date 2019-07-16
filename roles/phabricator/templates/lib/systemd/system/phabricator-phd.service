@@ -1,0 +1,16 @@
+[Unit]
+Description=phabricator-phd
+After=network.target
+Before=httpd.service
+
+[Service]
+User=apache
+Group=apache
+Type=oneshot
+Environment="PATH=/sbin:/usr/sbin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin"
+ExecStart={{phabricator_path}}/bin/phd start
+ExecStop={{phabricator_path}}/bin/phd stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

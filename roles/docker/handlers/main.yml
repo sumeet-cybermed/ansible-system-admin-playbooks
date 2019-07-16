@@ -1,0 +1,13 @@
+---
+
+- name: shared_data_container restart
+  service: name={{docker_data_only_container_service_name}} state=restarted
+
+- name: shared_data_container start
+  service: name={{docker_data_only_container_service_name}} state=started
+
+
+- name: shared_data_container stop
+  service: name={{docker_data_only_container_service_name}} state=stopped
+
+

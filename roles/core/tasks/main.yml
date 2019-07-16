@@ -1,0 +1,30 @@
+# 
+- name: Run Pre Tasks 
+  include: pre.yml
+  tags: ['always']
+  
+- name: Gather Default Variables
+  include_vars: "{{ item }}"
+  with_first_found: #from more specific to less specific - ?the more specific file could in turn include less specific files?
+    - "../vars/default.yml"
+  tags: ['always']
+  
+- name: Gather OS Specific Variables
+  include_vars: "{{ item }}"
+  with_first_found: #from more specific to less specific - ?the more specific file could in turn include less specific files?
+    - "../vars/{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml"
+    - "../vars/{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+    - "../vars/{{ ansible_distribution }}.yml"
+    - "../vars/{{ ansible_os_family }}.yml"
+    - "../vars/{{ansible_pkg_mgr}}.yml"
+  tags: ['always']
+  
+- name: Run YUM Specific Tasks 
+  include: yum.yml
+  when: "ansible_pkg_mgr=='yum'"
+  tags: ['always']
+  
+- name: Run APT Specific Tasks 
+  include: apt.yml
+  when: "ansible_pkg_mgr=='apt'"
+  tags: ['always']

@@ -1,0 +1,96 @@
+- name: Install PECL modules
+  tags: [ 'always' ]
+  command: pecl install {{ item }}
+  register: pecl_result
+  changed_when: "'already installed' not in pecl_result.stdout"
+  failed_when: "'already installed' not in pecl_result.stdout and 'completed successfully' not in pecl_result.stdout"
+  with_items:
+    - yaml
+    - redis
+  ignore_errors: true
+
+- name: copy/replace php-fpm conf file (apt)
+  template:
+    src: etc/php/fpm/pool.d/www.conf
+    dest: "{{php5_fpm_pool_path}}/www.conf"
+    owner: root
+    group: root
+    mode: 0755
+   
+- name: Register php modules
+  template:
+    src: "etc/php/mods-available/{{item.name}}"
+    dest: "{{item.path}}/{{item.name}}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+# dont - leads to suplicate loads!!!
+#    - {name: yaml, path: "{{php5_conf_path}}" }
+#    - {name: yaml, path: "{{php5_fpm_conf_path}}" }
+#    - {name: xdebug, path: "{{php5_conf_path}}" }
+#    - {name: xdebug, path: "{{php5_fpm_conf_path}}" }
+#    - {name: redis, path: "{{php5_conf_path}}" }
+#    - {name: redis, path: "{{php5_fpm_conf_path}}" }
+#    - {name: dbg-php, path: "{{php5_conf_path}}" }
+#    - {name: dbg-php, path: "{{php5_fpm_conf_path}}" }
+    - {name: zz_php_custom_settings.ini, path: "{{php5_conf_path}}" }
+    - {name: zz_php_custom_settings.ini, path: "{{php5_fpm_conf_path}}" }
+
+- name: Register php mysqlnd_ms config
+  template:
+    src: "etc/php/mods-available/{{item.name}}"
+    dest: "{{item.path}}/{{item.name}}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - {name: mysqlnd_ms.ini, path: "{{php5_conf_path}}" }
+    - {name: "{{mysqlnd_ms_json_filename}}", path: "{{mysqlnd_ms_json_path}}" }
+  when: (install_mysqlnd_ms)
+
+- name: delete php mysqlnd_ms config
+  file:
+    path: "{{item.path}}/{{item.name}}"
+    state: absent
+  with_items:
+    - {name: mysqlnd_ms.ini, path: "{{php5_conf_path}}" }
+    - {name: "{{mysqlnd_ms_json_filename}}", path: "{{mysqlnd_ms_json_path}}" }
+  when: (not install_mysqlnd_ms)
+
+#  # dont - leads to duplicate loads!!!
+#- name: fix php module paths
+#  lineinfile:
+#    dest: "{{item.path}}/{{item.name}}.ini"
+#    regexp: "{{item.regex}}"
+#    line: "{{item.regex}}{{php5_fix_modules_path}}/{{item.name}}.so"
+#  with_items:
+##    - {name: xdebug, path: "{{php5_conf_path}}", regex: 'zend_extension=' }
+##    - {name: xdebug, path: "{{php5_fpm_conf_path}}" , regex: 'zend_extension=' }
+##    - {name: yaml, path: "{{php5_conf_path}}", regex: 'extension=' }
+##    - {name: yaml, path: "{{php5_fpm_conf_path}}" , regex: 'extension=' }
+##    - {name: redis, path: "{{php5_conf_path}}" , regex: 'extension=' }
+##    - {name: redis, path: "{{php5_fpm_conf_path}}" , regex: 'extension=' }
+#  when: false and "php5_fix_modules_path != ''"
+
+- name: ensure dir exists - php5_custom_modules_path
+  tags: [ 'always' ]
+  file:
+      path: "{{php5_custom_modules_path}}"
+      state: directory
+      owner: root
+      group: root
+
+     
+# - name: copy phpEd dbg module .so (hack - we copy into base folder as still dont know how to know yearmonthdate folder)
+  # copy:
+    # src:  "{{ vagrant_doc_root }}/../PHPEd-Debugger-Modules/dbg-7.5.14-Linux/x86_64/dbg-php-{{php5_major_version}}.so"
+    # dest: "{{php5_custom_modules_path}}/dbg-php.so"
+    
+- name: enable and restart php-fpm    
+  service:
+    name: "{{php5_fpm_service_name}}"
+    state: restarted
+    enabled: true
+ 
+    

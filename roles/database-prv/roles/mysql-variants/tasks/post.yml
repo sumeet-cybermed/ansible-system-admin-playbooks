@@ -1,0 +1,118 @@
+---
+- name: open firewall for mysql
+  tags: ['always']
+  firewalld: service={{mysql_firewall_service}} permanent=true state=enabled
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  ignore_errors: false  
+
+- name: reload firewall
+  tags: ['always']
+  shell: "firewall-cmd --reload"
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  
+- name: ensure /etc/my.cnf ...
+  template: 
+    src: "{{ansible_root_dir}}/roles/database/templates/etc/mysql/my.cnf"
+    dest: "/etc/my.cnf"
+    owner: root 
+    group: root 
+    mode: 0644
+    
+- name: ensure non clustered /etc/my.cnf.d/server.cnf ...
+  template: 
+    src: "{{ansible_root_dir}}/roles/database/templates/etc/mysql/server.cnf"
+    dest: "/etc/my.cnf.d/server.cnf"
+    owner: root 
+    group: root 
+    mode: 0644
+  when: not is_clustered_db    
+ 
+  
+- name: ensure mysql slow.query.log file is created with mysql as owner
+  file: path=/var/log/mysql.slow.log state=touch owner=mysql group=mysql
+  
+- name: enable autostart of mysql (using service {{mysql_service}})
+  service: name={{mysql_service}} enabled=true state=started pattern="[  OK  ]"
+  sudo: yes
+  async: 5
+  poll: 1
+  ignore_errors: yes #sometimes takes time to start - or on centos, restart command hangs indefinitely
+  
+- name: wait for mysql to start
+  wait_for: 
+    host: "{{ ansible_ssh_host | default(inventory_hostname) }}"
+    port:  "{{db.mysql_listen_port}}"
+    state: started
+    delay: 1
+    timeout: 30
+  ignore_errors: yes #sometimes takes time to start - or on centos, restart command hangs indefinitely
+
+- name: ensure mysql users exist - else we get error on importing dump The user specified as a definer ('root'@'%') does not exist 
+  mysql_user: 
+    name: "root@{{item}}"
+    state: present
+    priv: "*.*"
+    password: "{{mysql_root_secure_password}}"
+    update_password: always
+    login_port:  "{{db.mysql_listen_port}}"
+    login_user: root
+    login_password: ""
+  with_items:
+    - localhost
+  ignore_errors: true  
+
+- name: ensure mysql users exist - else we get error on importing dump The user specified as a definer ('root'@'%') does not exist 
+  mysql_user: 
+    name: "root@{{item}}"
+    state: present
+    priv: "*.*"
+    password: "{{mysql_root_secure_password}}"
+    update_password: always
+    login_port:  "{{db.mysql_listen_port}}"
+    login_user: root
+    login_password: "{{mysql_root_secure_password}}"
+  with_items:
+    - localhost
+  ignore_errors: true  
+  
+- name: ensure mysql users exist - else we get error on importing dump The user specified as a definer ('root'@'%') does not exist 
+  shell: mysql -P {{db.mysql_listen_port}} -u root -p"{{ mysql_root_secure_password }}" -e "GRANT ALL ON *.* TO 'root'@'{{item}}' IDENTIFIED BY '{{mysql_root_secure_password}}';"
+  with_items:
+    - localhost
+    - 127.0.0.1
+    - "%"
+  ignore_errors: yes #in case password was already changed   
+  
+- name: ensure mysql users exist - FLUSH PRIVILEGES; else we get error on importing dump The user specified as a definer ('root'@'%') does not exist 
+  shell: mysql  -P {{db.mysql_listen_port}}  -u root -p"{{ mysql_root_secure_password }}" -e "FLUSH PRIVILEGES;"
+  with_items:
+    - localhost
+    - 127.0.0.1
+    - "%"
+  ignore_errors: yes #in case password was already changed     
+  
+#test login to mysql  
+- name: Check root user access
+  tags: [ 'always' ]
+  shell: "mysql  -P {{db.mysql_listen_port}} -u {{ mysql_root_user }} -p'{{ mysql_root_secure_password }}'"
+  sudo: yes
+  register: mysql_login_result
+  ignore_errors: true
+  
+- name: debug mysql_login_result
+  debug: var=mysql_login_result
+  
+  # hint to get temporary password  
+  # http://dev.mysql.com/doc/refman/5.7/en/linux-installation-rpm.html
+- name: find password of root user and run commands(for mysql 5.6.8+)
+  debug: 
+    msg: "{{item}}"
+  with_items:
+    - "!!!!Please set Mysql root password manually and rerun!!!!"  
+    - cat /var/log/mysqld.log | grep 'temporary password' " 
+    - mysql  -P {{db.mysql_listen_port}} -u root -p'' -e \"alter user '{{ mysql_root_user }}'@'localhost' IDENTIFIED BY '{{ mysql_root_secure_password }}' \"
+  ignore_errors: true
+  when: mysql_login_result|failed
+  
+- fail: msg="please change mysql password manually"
+  when: mysql_login_result|failed  

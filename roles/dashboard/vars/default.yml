@@ -1,0 +1,47 @@
+
+##########
+## for generating dashboard notes
+user_websites_installed_file: "/tmp/{{ansible_hostname}}-user_websites_installed.yml"
+
+default_websites_installed: 
+   - { path: '{{ansible_hostname}}', description: 'Home Page', sortas: '001'}
+   - { path: 'developer.{{ansible_hostname}}', description: 'Developer Page', sortas: '002'}
+   - { path: 'admin.{{ansible_hostname}}', description: 'Main Admin Page', sortas: '003'}
+   - { path: 'admin.{{ansible_hostname}}/logs', description: 'Log Viewer Page', sortas: '004'}
+   - { path: 'mail.{{ansible_hostname}}', description: 'Mail Hog Admin Page', sortas: '005'}
+
+#
+components_installed:
+    - samba
+    - "{{db_variant_desc}}"
+    - php-fpm
+    - php7-fpm
+    - nginx
+    - memcached
+    - varnish
+    - xhprof
+    - hhvm
+    - final-check
+
+backends_installed:
+    - hhvm
+    - php5
+    - php7
+    
+dev_tools_installed:
+    - Git
+    - Subversion
+    - Curl
+    - Ack
+    - Autojump
+    - Siege
+    - Composer
+    - PsySH
+    - Boris
+    - Xdebug
+    - XHProf
+    - PHPUnit    
+    
+# thisdomain: ""    
+
+user_websites_installed_line: "{% for thisdomain in domain %}    - { path: '{{thisdomain}}', description: '{{webapp_desc}} using backend: {{backend}}', sortas: '{{webapp}}.{{backend}}'}\n{% endfor %}"

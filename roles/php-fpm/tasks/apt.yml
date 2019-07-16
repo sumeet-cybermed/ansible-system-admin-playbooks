@@ -1,0 +1,53 @@
+---
+- name: Install PHP packages (apt)
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  tags:  install_packages
+  with_items:
+      - php5
+      - php5-cli
+      - php5-mysql
+      - php5-curl
+      - php5-gd
+      - php5-fpm
+      - php5-memcache
+      - php5-memcached
+      - php5-xdebug
+      - php5-dev
+      - php5-ldap
+      - php5-openssl
+      - libyaml-dev
+      - php5-json
+      - php5-mysqlnd
+
+- name: Install PHP package mysqlnd (apt)
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  tags:  install_packages
+  with_items:
+      - php5-mysqlnd_ms
+  when: install_mysqlnd_ms
+
+
+- name: Install PHP package mysqlnd (apt)
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=absent"
+  tags:  install_packages
+  with_items:
+      - php5-mysqlnd_ms
+  when: not install_mysqlnd_ms
+
+- name: Install Sometimes Missing PHP packages (apt)
+  tags:  install_packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items:
+      - php5-xcache
+      - php5-redis
+      - php-pear
+  ignore_errors: yes
+
+- name: Install Sometimes Missing PHP packages (apt)
+  tags:  install_packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items:
+      - php-mbstring
+      - php-pear #for pecl on debian
+  ignore_errors: yes
+  

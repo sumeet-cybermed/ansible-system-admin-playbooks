@@ -1,0 +1,17 @@
+---
+
+- name: varnish reload
+  service: name=varnish state=reloaded
+  ignore_errors: yes #bug: on yum based - VCL compilation failed
+  
+- name: varnish restart
+  service: name=varnish state=restarted
+  ignore_errors: yes #bug: on yum based - VCL compilation failed
+  
+- name: varnishncsa reload
+  service: name=varnishncsa state=reloaded
+  ignore_errors: yes #bug: on yum based - VCL compilation failed
+  
+- name: varnishncsa restart
+  service: name=varnishncsa state=restarted
+  ignore_errors: yes #bug: on yum based - VCL compilation failed

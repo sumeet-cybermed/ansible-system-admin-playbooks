@@ -1,0 +1,83 @@
+---
+## btfrs and /var/lib/lxc on btfrs
+- name: check if /var/lib/lxc is mounted btrfs already
+  tags: [ 'always' ]
+  shell: mount |grep "/var/lib/lxc type btrfs"
+  ignore_errors: True
+  register: lxc_btrfs
+  changed_when: lxc_btrfs.rc > 0
+
+- name: ensure there is a /var/lib/lxc
+  tags: [ install_packages ]
+  file: path=/var/lib/lxc state=directory
+
+- name: install essentials (apt)
+  apt: name={{item}} state={{installed_package_state}}
+  tags:  install_packages
+  with_items:
+     - btrfs-tools
+     - bridge-utils
+  when: ansible_pkg_mgr=='apt'  and lxc_btrfs.changed
+
+- name: install essentials (yum)
+  yum: name={{item}} state={{installed_package_state}}
+  tags:  install_packages
+  with_items:
+     - btrfs-progs
+     - bridge-utils
+  when: ansible_pkg_mgr=='yum'  and lxc_btrfs.changed
+  
+- name: configure vdb with btrfs - will not overwrite existing file system!
+  tags: [ install_packages ]
+  shell: mkfs.btrfs /dev/sdb
+  when: lxc_btrfs.changed
+  ignore_errors: True
+  
+- name: ensure /var/lib/lxc is mounted
+  tags: [ install_packages ]
+  mount: name=/var/lib/lxc fstype=btrfs src=/dev/sdb state=mounted
+  ignore_errors: True  
+  when: mount_lxc_as_btfrs is defined and mount_lxc_as_btfrs
+
+### download flockport lxc installer
+- name: ensure download dir exists
+  tags: [ 'always' ]
+  file: 
+    path: "/var/downloads/flockport_lxc/"
+    state: directory
+  
+- name: check if flockport_lxc is downloaded already 
+  tags: [ 'always' ]
+  stat: 
+    path: "/var/downloads/flockport_lxc/{{flockport_lxc_filename}}"
+  register: flockport_lxc_check_downloaded  
+  
+- name: Download flockport_lxc
+  tags: [ install_packages ]
+  get_url: 
+    url="{{ flockport_lxc_url }}"
+    dest="/var/downloads/flockport_lxc/{{flockport_lxc_filename}}"
+ # is a small file - always downlpad to update
+ # when:  not flockport_lxc_check_downloaded.stat.exists
+
+- name: ensure install dir exists
+  tags: [ 'always' ]
+  file: 
+    path: "/tmp/flockport_lxc"
+    state: directory
+- name: unarchive instaler
+  tags: [ install_packages ]
+  unarchive: 
+    src: "/var/downloads/flockport_lxc/{{flockport_lxc_filename}}"
+    dest: /tmp/flockport_lxc
+
+ ### install flockport lxc
+- name: Install flockport_lxc 
+  tags: [ install_packages ]
+  shell: "cd /tmp/flockport_lxc/flockport-install;./flockport.run"
+  
+  
+- name: template /etc/init.d/lxc-net 
+  template:
+    src: etc/init.d/lxc-net 
+    dest: /etc/init.d/lxc-net 

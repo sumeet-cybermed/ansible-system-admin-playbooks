@@ -1,0 +1,38 @@
+﻿
+#
+# phpMemcachedAdmin setup
+#
+- name: Check whether pMA is a Git checkout
+  tags: [ 'always' ]
+  stat:
+    path: "{{ admin_doc_root }}/phpmemcachedadmin/.git"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  register: pma_git_dir
+
+- name: Nuke pMA install if not a Git checkout
+  tags: [ install_packages ]
+  file:
+    path: "{{ admin_doc_root }}/phpmemcachedadmin"
+    state: absent
+  when: (not is_clustered_storage_var_www or cluster_master is defined) and pma_git_dir.stat.isdir is not defined
+  
+- name: Ensure phpMemcachedAdmin directory exists
+  tags: [ 'always' ]
+  file:
+    path: "{{ admin_doc_root }}/phpmemcachedadmin"
+    state: directory
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'phpmemcachedadmin' ]
+
+- name: Download phpMemcachedAdmin
+  tags: [ install_packages ]
+  git:
+    repo: https://github.com/wp-cloud/phpmemcacheadmin.git
+    dest: "{{ admin_doc_root }}/phpmemcachedadmin"
+    update: no
+    accept_hostkey: yes
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  # tags:  [ 'admin', 'phpmemcachedadmin' ]
+  

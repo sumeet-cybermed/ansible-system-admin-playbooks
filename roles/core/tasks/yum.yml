@@ -1,0 +1,128 @@
+---
+- debug: var=ansible_distribution_major_version
+
+- name: Configure SELinux (yum) - mysql community 5.6.23 no longer starts unless selinux is disabled/permission. / nginx also does not bind
+  tags: ['always']
+  selinux: state={{selinux_state}} policy=targeted
+  ignore_errors: false
+
+- name: enable firewalld
+  service: "name=firewalld state=started enabled=true"
+  ignore_errors: true
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+
+- name: disable firewalld (service)
+  service: "name=firewalld state=stopped enabled=false"
+  ignore_errors: true
+  when: firewall_state=='disabled' and (ansible_distribution_major_version|int) > 6
+
+- name: disable firewalld (shell)
+  shell: "systemctl stop firewalld"
+  ignore_errors: true
+  when: firewall_state=='disabled' and (ansible_distribution_major_version|int) > 6
+
+
+- name: open firewall for ssh
+  tags: ['always']
+  shell: "firewall-cmd --permanent --zone=public --add-service=ssh"
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+
+- command: /bin/true
+  tags: ['always']
+  notify: firewalld reload
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+
+- name: boot to runlevel 3 (systemctl)
+  shell: systemctl set-default multi-user.target
+  ignore_errors: true
+
+- name: boot to runlevel 3 (/etc/inittab)
+  shell: sed -i 's/id:5:initdefault:/id:3:initdefault:/' /etc/inittab
+  ignore_errors: true
+
+  #needed as yum based distribs dont use www-data as default users  
+- name: "Create web Group (yum)" 
+  group: name={{ web_group }} state=present
+  ignore_errors: false
+       
+- name: "Create web user (yum)"
+  user: name={{ web_user }} comment="" group={{ web_group}} password="" state=present
+  ignore_errors: false
+    
+- name: kill all yum instances (yum)
+  shell: killall -9 {{ item}}
+  with_items:
+    - PackageKit
+    - yum
+  ignore_errors: yes
+    
+- name: remove /var/run/yum.pid (yum)
+  shell: rm -rf /var/run/yum.pid 
+  ignore_errors: yes
+  
+- name: remove PackageKit (yum)
+  yum: name={{item}} state=absent
+  with_items:
+    - PackageKit
+
+- name: configure yum to cache packages (yum)
+  lineinfile: dest=/etc/yum.conf regexp=keepcache= line=keepcache=1 create=true
+    
+- name: configure yum to cache across distrib types (for 7) - needed as rhel $releasever = 7Server
+  lineinfile: dest=/etc/yum.conf regexp=^cachedir= line=cachedir=/var/cache/yum/$basearch/7 create=true
+  when: "'{{ ansible_distribution_major_version }}' == '7'"
+      
+- name: configure yum to cache across distrib types (all other than 7)
+  lineinfile: dest=/etc/yum.conf regexp=^cachedir= line=cachedir=/var/cache/yum/$basearch/$releasever create=true
+  when: "'{{ ansible_distribution_major_version }}' != '7'"
+
+- name: configure yum to cache metadata for N days (yum)
+  lineinfile: dest=/etc/yum.conf regexp=metadata_expire= line=metadata_expire=2d create=true
+
+- name: configure yum to disable deltarpms (yum)
+  lineinfile: dest=/etc/yum.conf regexp=deltarpm= line=deltarpm=0 create=true
+
+- name: configure yum to enable repos if needed (yum)
+  lineinfile: dest=/etc/yum/pluginconf.d/search-disabled-repos.conf regexp=notify_only= line=notify_only=0 create=true
+    
+- name: configure yum retries (yum)
+  lineinfile: dest=/etc/yum.conf regexp=retries= line=retries=5 create=true
+    
+- name: configure yum timeout (yum)
+  lineinfile: dest=/etc/yum.conf regexp=timeout= line=timeout=120 create=true
+    
+- name: enable yum plugins (yum)
+  lineinfile: dest=/etc/yum.conf regexp=plugins= line=plugins=1 create=true
+  
+- name: diable fastestmirror
+  lineinfile: dest=/etc/yum/pluginconf.d/fastestmirror.conf regexp=enabled= line=enabled=0 create=true
+
+     
+- name: Install EPEL repo. (yum)
+  tags:  install_packages
+  yum:
+    name: "{{ yum_epel_repo_url }}"
+    state: present
+  when: is_initial_run is defined
+  async: 30
+  poll: 3
+  ignore_errors: true #timeout is common
+  
+- name: Import EPEL GPG key (yum)
+  tags:  install_packages
+  rpm_key:
+    key: "{{ yum_epel_repo_gpg_key_url }}"
+    state: present
+    validate_certs: no
+  when: is_initial_run is defined
+  ignore_errors: true
+  
+- name: install packages
+  tags:  install_packages
+  yum: name={{ item }} state={{installed_package_state}}
+  with_items:
+   - yum-utils
+   
+- name: complete transactions
+  tags:  install_packages
+  shell: yum-complete-transaction --cleanup-only

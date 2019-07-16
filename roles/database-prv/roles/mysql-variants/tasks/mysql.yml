@@ -1,0 +1,76 @@
+---
+- name: Install mysql repo. (yum)
+  tags:  install_packages
+  yum:
+    name: "{{ yum_mysql_repo_url }}"
+    state: present
+  when: "ansible_pkg_mgr=='yum' and db_type=='mysql' and (db_variant=='mysql')"
+  
+- name: Import mysql GPG key. (yum)
+  tags:  install_packages
+  rpm_key:
+    key: "{{ yum_mysql_repo_gpg_key_url }}"
+    state: present
+  when: "ansible_pkg_mgr=='yum' and db_type=='mysql' and (db_variant=='mysql')"  
+  
+
+- name: Install MySQL ppa repo
+  tags:  install_packages
+  shell: add-apt-repository  ppa:ondrej/mysql-5.6
+  #apt_repository: repo='deb http://ppa.launchpad.net/ondrej/mysql-5.6  {{ ansible_distribution|lower}} {{ ansible_lsb.codename }} main' state=present update_cache=yes
+  when: "ansible_pkg_mgr=='apt' and db_type=='mysql' and (db_variant=='mysql')"  
+  
+- name: remove mariadb server (apt)
+  tags:  install_packages
+  apt: name={{ item}} state=absent force=yes
+  # tags:  [ 'mysql', 'database' ]
+  with_items:
+    - mariadb-server
+    - mariadb-client
+  when: "ansible_pkg_mgr == 'apt'"
+  
+- name: remove mariadb server (yum)
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=absent"
+  tags:  install_packages
+  with_items:
+    - mariadb-server-{{ db_version }}
+    - mariadb-client-{{ db_version }}
+    - mariadb-server
+  when: "ansible_pkg_mgr == 'yum'"
+    
+- name: Install mysql server community(apt)
+  apt: name={{ item}} state={{installed_package_state}} force=yes update_cache=yes
+  notify:
+    # - update-rc mysql
+    - mysql restart
+  # tags:  [ 'mysql', 'database' ]
+  with_items:
+    - mysql-server-{{ db_version }}
+    - mysql-client-{{ db_version }}
+    - mysql-server
+    - python-mysqldb
+  when: "ansible_pkg_mgr == 'apt' and db_license == 'community'"
+  
+- name: Install mysql-server community(yum)
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  tags:  install_packages
+  when: "ansible_pkg_mgr == 'yum' and db_license == 'community'"
+  with_items:
+    - mysql-community-server
+    - MySQL-python
+    
+# http://dev.mysql.com/doc/refman/5.7/en/linux-installation-rpm.html    
+- name: Install mysql-server commercial (yum)
+  shell: "cd /var/downloads/mysql-commercial; yum install -y -t {{ item }}"
+  tags:  install_packages
+  with_items:
+    - "mysql-commercial-{server,client,common,libs,devel,test}-*"
+    - "mysql-connector-python-commercial-*"
+    - "mysql-{utilities,workbench}-commercial-*"
+    - MySQL-python
+  when: "ansible_pkg_mgr == 'yum' and db_license == 'commercial'"
+  ignore_errors: true
+  
+  
+    
+

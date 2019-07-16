@@ -1,0 +1,90 @@
+---
+- name: install from dual prerequisites
+  yum:
+    name: "{{item}}"
+    state: latest
+    enablerepo: remi-php{{php5_major_version}}
+  with_items:
+    - php-cli
+    - php-process
+    - php-mysqli
+    - zabbix-sender
+    - numactl
+  tags:
+      - install_packages
+
+- name: create fpmmm.ini
+  blockinfile:
+    dest: /etc/php.d/fpmmm.ini
+    marker: "; {mark} ANSIBLE MANAGED BLOCK - FPMMM"
+    block: |
+         variables_order = 'EGPCS'
+         ;date.timezone = 'Europe/Zurich'
+    state: present
+    create: yes
+    backup: yes
+
+- name: ensure dirs exist
+  file:
+    path: "{{item}}"
+    state: directory
+    owner: zabbix
+    group: zabbix
+  with_items:
+    - /var/download/fpmmm
+    - /etc/fpmmm
+
+- name: download latest fpmmm
+  copy:
+    src: ../../zabbix-server/files/fromdual-fpmmm/fpmmm-0.10.6.tar.gz
+    dest: /var/download/fpmmm/fpmmm-0.10.6.tar.gz
+
+
+- name: install from dual mpm agent files
+  shell: "cd /opt;
+         tar xf /var/download/fpmmm/fpmmm-0.10.6.tar.gz;
+         rm -f fpmmm;
+         ln -s fpmmm-0.10.6 fpmmm;
+         cp /opt/fpmmm/tpl/fpmmm.conf.template /etc/fpmmm/fpmmm.conf;
+         chown -R zabbix: /etc/fpmmm;
+         "
+
+- name: Configure /etc/fpmmm/fpmmm.conf
+  template: src=fpmmm.conf
+            dest=/etc/fpmmm/fpmmm.conf
+            owner=zabbix
+            group=zabbix
+            mode=0644
+
+
+- name: test fpmmm
+  shell: "/opt/fpmmm/bin/fpmmm --config=/etc/fpmmm/fpmmm.conf;
+         #response should be 1
+          cat /tmp/fpmmm/fpmmm.log;
+         "
+  ignore_errors: true
+
+- name: tell zabbix-agent to run the fpmmm on a regular basis - not working - use cron job
+  lineinfile:
+    dest: /etc/zabbix/zabbix_agentd.d/userparameter_fromdual.conf
+    line: "UserParameter=FromDual.MySQL.check,/opt/fpmmm/bin/fpmmm --config=/etc/fpmmm/fpmmm.conf"
+    state: present
+    create: true
+  when: false
+
+
+#check with crontab -e
+- name: tell zabbix-agent to run the fpmmm on a regular basis using cron job
+  tags: [ 'always' ]
+  cron: name="{{item.name}}" minute="{{item.minute}}" job="{{item.job}}"
+  with_items:
+     - {name: "Run From Dual fpmmm", minute: "*", job: 'bash {{user_system_scripts_directory}}/run_job_every_n_secs.sh "/opt/fpmmm/bin/fpmmm --config=/etc/fpmmm/fpmmm.conf" '}
+  when: true
+
+
+- name: must import the fpmm templates into zabbix server
+  shell: "echo '----------------------------------
+               Go to Configuration > Templates > Import and import all the fpmmm templates.
+               ----------------------------------'
+         "
+

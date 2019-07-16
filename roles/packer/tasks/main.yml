@@ -1,0 +1,60 @@
+### packer binaries
+- name: check if  download dir exists
+  tags: [ 'always' ]
+  file: 
+    path: "/var/downloads/packer"
+    state: directory
+  
+- name: check if packer is downloaded already 
+  tags: [ 'always' ]
+  stat: 
+    path: "/var/downloads/packer/{{packer_filename}}"
+  register: packer_check_deb_downloaded  
+  
+- name: Download packer.zip
+  tags: [ install_packages ]
+  get_url: 
+    url="{{ packer_url }}"
+    dest="/var/downloads/packer/{{packer_filename}}"
+  when:  not packer_check_deb_downloaded.stat.exists
+  
+- name: make packer home dir
+  tags: [ install_packages ]
+  file: path={{packer_home}} state=directory owner=root group=root
+  
+- name: Install packer 
+  tags: [ install_packages ]
+  unarchive: src=/var/downloads/packer/{{packer_filename}} dest={{packer_home}} copy=no owner={{ web_user }} group={{ web_group }} 
+  
+- name: add packer to path and set packerpath  var
+  lineinfile:
+    line: "{{packer_export_env}}"
+    dest: /home/{{item}}/.profile
+    state: present
+    create: true
+  with_items:
+    - root
+    - vagrant
+    - "{{developer_user}}"
+  ignore_errors: true
+  
+- name:  export packer env
+  shell: "{{packer_export_env}}"
+  
+- name: create symlink for binary
+  file: 
+    src: "{{packer_bin}}"
+    dest: /usr/local/bin/packer
+    state: link
+    
+  
+###gox
+- name: install gox
+  tags: [ install_packages ]
+  shell: "{{go_export_env}};{{go_bin}} get -u github.com/mitchellh/gox"
+  
+- name: create symlink for gox binary
+  file: 
+    src: "{{go_path}}/bin/gox"
+    dest: /usr/local/bin/gox
+    state: link

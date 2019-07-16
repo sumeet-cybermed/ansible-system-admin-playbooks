@@ -1,0 +1,18 @@
+- name: "Set up {{ webapp }} {{ backend }} virtualhost"
+  template: src=etc/nginx/wordpress.conf dest=/etc/nginx/conf.d/{{ webapp }}-{{ backend }}.conf owner=root group=root mode=0644
+  notify: nginx reload
+
+- name: "Set up cache alias for {{ webapp }} {{ backend }}"
+  template: src=etc/nginx/wpcache.conf dest=/etc/nginx/conf.d/cache.{{ webapp }}-{{ backend }}.conf owner=root group=root mode=0644
+  notify: nginx reload
+
+- name: "Enable PML viewing for {{ webapp }} {{ backend }}"
+  template: src=pimpmylog.json dest={{ admin_doc_root }}/logs/config.user.d/{{ webapp }}-{{ backend }}.json
+  with_items:
+    - "{{ domain }}"
+
+#######    
+- name: add to user_websites_installed
+  include: ../../dashboard/tasks/add_to_user_websites_installed.yml
+  tags: ['always']
+#######    

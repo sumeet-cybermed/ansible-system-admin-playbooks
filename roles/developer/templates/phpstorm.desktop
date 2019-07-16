@@ -1,0 +1,10 @@
+[Desktop Entry]  
+Version=1.0  
+Exec={{phpstorm_bin}}
+Name=PhpStorm  
+GenericName=PhpStorm
+Comment=Start PhpStorm
+Encoding=UTF-8  
+Terminal=true  
+Type=Application  
+Categories=Application

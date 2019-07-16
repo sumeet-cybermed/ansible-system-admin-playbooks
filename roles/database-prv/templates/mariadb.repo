@@ -1,0 +1,5 @@
+[mariadb]
+name = MariaDB {{db_version}}
+baseurl = http://yum.mariadb.org/{{db_version}}/{{mariadb_repo_subpath}}-amd64
+gpgkey={{ yum_mariadb_repo_gpg_key_url }}
+gpgcheck=1

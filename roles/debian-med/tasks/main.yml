@@ -1,0 +1,70 @@
+---
+- name: Run Pre Derbian Med Tasks
+  include: pre.yml
+  tags: ['always']
+  
+########  
+- name: Install FreeMedForms
+  include: freemedforms.yml
+  when: "install_freemedforms"
+  tags: ['always']
+  
+- name: install packages
+  apt: name={{item}} state={{installed_package_state}}
+  tags:  install_packages
+  ignore_errors: true
+  with_items:
+    # - med-bio
+    # #     - Debian Med micro-biology packages
+    # - med-bio-dev
+    # #     - Debian Med packages for development of micro-biology applications
+    # - med-cloud
+    # #     - Debian Med bioinformatics applications usable in cloud computing
+    # - med-config
+    # #     - Debian Med general config package
+    - med-data
+    #     - Debian Med drug databases
+    - med-dental
+    #     - Debian Med packages related to dental practice
+    # - med-epi
+    # #     - Debian Med epidemiology related packages
+    - med-his
+    #     - Debian Med suggestions for Hospital Information Systems
+    - med-imaging
+    #     - Debian Med imaging packages
+    # - med-imaging-dev
+    # #     - Debian Med packages for medical image development
+    - med-laboratory
+    #     - Debian Med suggestions for medical laboratories
+    - med-oncology
+    #     - Debian Med packages for oncology
+    - med-pharmacy
+    #     - Debian Med packages for pharmaceutical research
+    # - med-physics
+    # #     - Debian Med packages for medical physicists
+    - med-practice
+    #     - Debian Med packages for practice management
+    # - med-psychology
+    # #     - Debian Med packages for psychology
+    # - med-rehabilitation
+    # #     - Debian Med packages for rehabilitation technologies
+    # - med-statistics
+    # #     - Debian Med statistics
+    - med-tasks
+    #     - Debian Med tasks for tasksel
+    - med-tools
+    #     - Debian Med several tools
+    # - med-typesetting
+    # #     - Debian Med support for typesetting and publishing 
+  
+# - name: Install MariaDB
+  # include: mariadb.yml
+  # when: "db_variant=='mariadb'"
+
+# - name: Install Percona
+  # include: percona.yml
+  # when: "db_variant=='percona'"    
+     
+#######
+- name: Run Post Derbian Med Tasks
+  include: post.yml

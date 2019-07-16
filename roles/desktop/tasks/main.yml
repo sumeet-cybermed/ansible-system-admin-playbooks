@@ -1,0 +1,26 @@
+---
+- name: Run Pre MySQL Variants Tasks
+  include: pre.yml
+  tags: ['always']
+  
+########  
+- name: Install Gnome
+  include: gnome.yml
+  when: "desktop_variant='gnome' "
+  tags: ['always']
+  
+- name: Install UNity
+  include: unity.yml
+  when: "desktop_variant=='unity' "
+  tags: ['always']
+
+- name: Install KDE
+  include: kde.yml
+  when: "desktop_variant=='kde' "
+  tags: ['always']
+    
+      
+########
+- name: Run Post Tasks
+  include: post.yml
+  tags: ['always']

@@ -1,0 +1,17 @@
+---
+#we include in case this was included manually from a tasks file
+- name: include defaults
+  include_vars: ../defaults/main.yml
+  tags: ['always']
+  
+- name: include vars
+  include_vars: ../vars/main.yml
+  tags: ['always']
+  
+- include: apt.yml
+  when: "ansible_pkg_mgr == 'apt'"  
+  tags: ['always']
+  
+- include: yum.yml
+  when: "ansible_pkg_mgr == 'yum'"  
+  tags: ['always'] 

@@ -1,0 +1,38 @@
+---
+##no cron for testing sites
+webapp_cron_jobs:
+
+
+lb:
+  ##external eth bound
+  external_loadbalanced_ip:  "10.10.10.200" #{{ansible_eth0.ipv4.address}}"
+  internal_loadbalanced_ip: "10.10.10.200" #"{{ansible_eth0.ipv4.address}}"
+  #
+  nfs_server_1_external_addr: "10.10.10.199" #"{{ansible_eth0.ipv4.address}}"
+  server_monitor_1_external_addr: "10.10.10.199" #"{{ansible_eth0.ipv4.address}}"
+  cluster_controller_1_external_addr: "10.10.10.199" #"{{ansible_eth0.ipv4.address}}"
+  #
+  nfs_server_1_internal_addr: "10.10.10.199" #"{{ansible_eth0.ipv4.address}}"
+  server_monitor_1_internal_addr: "10.10.10.199" #"{{ansible_eth0.ipv4.address}}"
+  cluster_controller_1_internal_addr: "10.10.10.199" #"{{ansible_eth0.ipv4.address}}"
+  #
+  external_eth_id: "eth0"
+  external_eth_name: "ansible_eth0"
+  external_bind_address: "{{ansible_eth0.ipv4.address}}"
+  #
+  external_network: "{{ansible_eth0.ipv4.network}}"
+  external_subnet: "{{[ansible_eth0.ipv4.network, ansible_eth0.ipv4.netmask]|join('/')| ipaddr('net')}}"
+  ###
+  ##internal eth bound
+  internal_eth_id: "eth0"
+  internal_eth_name: "ansible_eth0"
+  internal_bind_address: "{{ansible_eth0.ipv4.address}}"
+  #
+  internal_network: "{{ansible_eth0.ipv4.network}}"
+  internal_subnet: "{{[ansible_eth0.ipv4.network, ansible_eth0.ipv4.netmask]|join('/')| ipaddr('net')}}"
+
+  ###
+  auth: "{{haproxy_securepassword}}"
+  username: "repl_user"
+
+

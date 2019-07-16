@@ -1,0 +1,94 @@
+
+- name: ensure scripts dir exists
+  tags: [ 'always' ]
+  file:
+    name: "{{item}}"
+    state: directory
+  with_items:
+    - "{{user_system_scripts_directory}}"
+    - "{{user_scripts_directory}}"
+
+- name: check if startup script exists
+  tags: [ 'always' ]
+  stat: 
+    path: "{{user_system_scripts_directory}}/01_run_on_boot.sh"
+  register: startup_script_stat
+
+- name: "copy startup scripts: {{user_system_scripts_directory}}/01_run_on_boot.sh"
+  template:
+    src: "scripts/01_run_on_boot.sh"
+    dest: "{{user_system_scripts_directory}}/01_run_on_boot.sh"
+    owner: root
+    group: root
+    mode: 0755
+  when: not startup_script_stat.stat.exists
+
+- name: "copy script: {{user_system_scripts_directory}}/run_job_every_n_secs.sh"
+  template:
+    src: "scripts/run_job_every_n_secs.sh"
+    dest: "{{user_system_scripts_directory}}/run_job_every_n_secs.sh"
+    owner: root
+    group: root
+    mode: 0755
+  when: not startup_script_stat.stat.exists
+
+- name: ensure system_service_directory dir exists (needed for earlier versions of CentoS)
+  tags: [ 'always' ]
+  file:
+    name: "{{system_service_directory}}"
+    state: directory
+      
+- name: "copy startup scripts service: run_startup_scripts.service"
+  template:
+    src: "scripts/{{startup_service_file}}"
+    dest: "{{system_service_directory}}/{{startup_service_file}}"
+    owner: root
+    group: root
+    mode: 0755
+  
+- name: enable autostart of run_startup_scripts.service
+  service: 
+    name: run_startup_scripts
+    enabled: yes
+    state: restarted
+    pattern: "[  OK  ]"
+  async: 5
+  ignore_errors: true
+    
+- name: copy sysctl.conf  
+  template:
+    src: etc/sysctl.conf
+    dest: /etc/sysctl.conf
+    owner: root
+     
+- name: restart sysctl
+  shell:  "sysctl -p"    
+  
+- name: configure postfix - main.cf
+  lineinfile:  
+    dest: "{{item.path}}"
+    line: "{{item.line}}"
+    state: present
+    create: true
+  with_items:
+    - {path: "/etc/postfix/main.cf", line: "{{postfix_main_cf_line}}", state: 'present'}
+  when: postfix_main_cf_line != ''
+
+- name: configure postfix - sasl_passwd
+  lineinfile:  
+    dest: "{{item.path}}"
+    line: "{{item.line}}"
+    state: present
+    create: true
+  with_items:
+    - {path: "/etc/postfix/sasl_passwd", line: "{{postfix_sasl_password_line}}", state: 'present'}
+  when: postfix_sasl_password_line != ''
+  
+- name: configure postfix - postmap
+  shell: touch /etc/postfix/sasl_passwd; postmap /etc/postfix/sasl_passwd 
+  when: postfix_sasl_password_line != ''  
+
+- name: restart postfix
+  service: name=postfix  state=restarted
+  
+  

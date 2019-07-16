@@ -1,0 +1,12 @@
+---
+- name: clustercontrol_container restart
+  service: name={{mongo_db_docker_container_name}}.service state=restarted
+
+- name: clustercontrol_container start
+  service: name={{mongo_db_docker_container_name}}.service state=started
+
+
+- name: clustercontrol_container stop
+  service: name={{mongo_db_docker_container_name}}.service state=stopped
+
+

@@ -1,0 +1,211 @@
+---
+- debug:
+    msg: "{{item}}"
+  with_items:
+    - "db: {{db}}"
+    - "lb: {{lb}}"
+  ignore_errors: true
+  tags: ['always']
+
+- name: ensure selinux is running in permissive mode
+  tags: ['always']
+  shell: setenforce 0
+  when: selinux_state != 'enabled'
+  ignore_errors: true
+
+- name: open firewall for mysql
+  tags: ['always']
+  shell: "firewall-cmd --permanent --zone=public {{item}}"
+  with_items:
+    - "--add-service=mysql"
+    - "--add-port={{db.mysql_listen_port}}/tcp"
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  
+- name: open firewall for galera
+  tags: ['always']
+  shell: "firewall-cmd --permanent --zone=public {{item}}" 
+  with_items:
+    - "--add-service=mysql"
+    - "--add-port={{db.mysql_listen_port}}/tcp"
+    - "--add-port=4444/tcp"
+    - "--add-port=4567/tcp"
+    - "--add-port=4567/udp"
+    - "--add-port=4568/tcp"
+  when: is_clustered_db and firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  
+- command: /bin/true
+  tags: ['always']
+  notify: firewalld reload
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6   
+
+- name: add MariaDB repo
+  tags:  install_packages
+  copy: src=mariadb.repo dest=/etc/yum.repos.d/mariadb.repo
+  
+- name: remove possiblly conflicting packages
+  tags:  install_packages
+  shell: "yum -y remove Percona* percona*"
+  
+- name: install packages
+  tags:  install_packages
+  yum: name={{ item }} state={{installed_package_state}}
+  with_items:
+    - socat
+    - MySQL-python
+    - MariaDB-server
+    - MariaDB-client
+    - MariaDB-test
+    - rsync
+    - galera
+    - xinetd
+  ignore_errors: false
+
+- name: set up .my.cnf to allow passwordless login for become user 
+  tags: [ 'always' ]
+  template: src=user.my.cnf dest='~/.my.cnf'
+
+- name: set up mysqlslap.sh for load testing
+  tags: [ 'always' ]
+  template: src=mysqlslap.sh dest='{{user_scripts_directory}}/mysqlslap.sh'
+
+- name: generate server my.cnf [always]
+  tags: [ 'always' ]
+  template: src=my.cnf dest=/etc/my.cnf
+  
+- name: ensure directory exists
+  tags: [ 'always' ]
+  file: path="/etc/my.cnf.d" state=directory
+          
+- name: generate clustered /etc/my.cnf.d/server.cnf ...
+  template: src=server.galera.cnf dest=/etc/my.cnf.d/server.cnf mode=0644 owner=root group=root
+  register: conf
+  when: is_clustered_db
+  
+- name: ensure non clustered /etc/my.cnf.d/server.cnf ...
+  tags: [ 'always' ]
+  template: 
+    src: "server.cnf"
+    dest: "/etc/my.cnf.d/server.cnf"
+    owner: root 
+    group: root 
+    mode: 0644
+  when: not is_clustered_db
+  
+- name: enable autostart of mysql (using service {{mysql_service}})
+  service: name={{mysql_service}} enabled=true 
+  ignore_errors: no
+
+- name: stop mysql service on all nodes 
+  service: name=mysql state=stopped
+  when:  true
+  tags:  install_packages
+  
+- name: ensure mysql slow.query.log file is created with mysql as owner
+  tags: [ 'always' ]
+  file: path=/var/log/mysql.slow.log state=touch owner=mysql group=mysql  
+
+# see: http://stackoverflow.com/questions/33277865/mysql-galera-node-not-starting-aborting-with-error-wsrep-60-failed-to
+# # # http://severalnines.com/blog/how-bootstrap-mysqlmariadb-galera-cluster
+- name: CALL service mysql start --wsrep-new-cluster on MASTER
+  shell: "echo '### setting safe_to_bootstrap: 1 in master:/var/lib/mysql/grastate.dat ###'
+  sed -i 's/safe_to_bootstrap: 0/safe_to_bootstrap: 1/' /var/lib/mysql/grastate.dat
+  echo '### starting service on master ###'
+  service mysql start --wsrep-new-cluster
+  "
+  when: is_clustered_db and cluster_master is defined
+  ignore_errors: yes #sometimes takes time to start - or on centos, restart command hangs indefinitely
+
+- name: ensure  mysql is started on non master nodes 
+  shell: 'service mysql start'
+  when: is_clustered_db and cluster_master is not defined
+  ignore_errors: yes #sometimes takes time to start - or on centos, restart command hangs indefinitely
+
+- name: CALL service mysql start on ALL NODES
+  tags: [ 'always' ]
+  shell: 'service mysql start'
+  when: not is_clustered_db
+  ignore_errors: yes #sometimes takes time to start - or on centos, restart command hangs indefinitely
+  
+- name: change mysql root password (try with empty intial password)
+  tags: [ 'always' ]
+  mysql_user:
+    name: root 
+    host: "{{ item }}" 
+    password: "{{ db.root_pass }}"
+    login_port:  "{{db.mysql_listen_port}}"
+    login_user: root
+#    login_password: ""
+    check_implicit_admin: yes
+    priv: "*.*:ALL,GRANT"
+  with_items:
+    "{{db.allow_remote_connect_from}}"
+  when: not is_clustered_db  or cluster_master is defined
+  ignore_errors: true
+  
+- name: change mysql root password (try with new password)
+  mysql_user:
+    name: root 
+    host: "{{ item }}" 
+    login_port:  "{{db.mysql_listen_port}}"
+    password: "{{ db.root_pass }}"
+    login_user: root
+    login_password: "{{ db.root_pass }}"
+    check_implicit_admin: yes
+    priv: "*.*:ALL,GRANT"
+  with_items:
+    "{{db.allow_remote_connect_from}}"
+  when: not is_clustered_db  or cluster_master is defined
+  
+- name: delete non existing mysql user
+  mysql_user: name='' state=absent login_port={{db.mysql_listen_port}} login_user=root login_password="{{ db.root_pass }}"
+  when: not is_clustered_db  or cluster_master is defined
+
+- name: delete anonymous MySQL server user for {{ ansible_hostname }}
+  mysql_user: user="" host="{{ ansible_hostname }}" state="absent" login_port={{db.mysql_listen_port}} login_user=root login_password="{{ db.root_pass }}"
+  when: not is_clustered_db  or cluster_master is defined
+ 
+- name: remove the MySQL test database
+  mysql_db:
+    db: test 
+    state: absent
+    login_port:  "{{db.mysql_listen_port}}"
+    login_user: root
+    login_password: "{{ db.root_pass }}"
+  when: not is_clustered_db  or cluster_master is defined
+
+- name: create replication user
+  mysql_user: name={{db.repl_username}} host="%"  password={{ db.repl_pass }} priv=*.*:ALL state=present login_port={{db.mysql_listen_port}} login_user=root login_password="{{ db.root_pass }}"
+  when: is_clustered_db  and cluster_master is defined
+
+- name: create lb user
+  mysql_user: name={{db.lb_username}}  host="%"  password={{ db.lb_pass }} priv=*.*:ALL state=present login_port={{db.mysql_listen_port}} login_user=root login_password="{{ db.root_pass }}"
+  when: is_clustered_db  and cluster_master is defined
+
+- name: grant proper permissions to lb_user for maxscale
+  shell: mysql -u root -p'{{ db.root_pass }}' -P {{db.mysql_listen_port}} -e "GRANT SELECT ON mysql.db TO '{{db.lb_username}}'@'%';GRANT SELECT ON mysql.tables_priv TO '{{db.lb_username}}'@'%';GRANT SHOW DATABASES ON *.* TO '{{db.lb_username}}'@'%';"
+  when: is_clustered_db and cluster_master is defined
+
+- name: create clustercheck from clustercheck_read_write_all_nodes
+  copy: src=clustercheck_read_write_all_nodes dest=/usr/bin/clustercheck mode="755"
+  when: is_clustered_db and not install_mysqlnd_ms
+
+- name: create clustercheck from clustercheck_rw_split
+  copy: src=clustercheck_rw_split dest=/usr/bin/clustercheck mode="755"
+  when: is_clustered_db and install_mysqlnd_ms
+
+- name: create clustercheck_rw_split for testing
+  copy: src=clustercheck_rw_split dest=/usr/bin/clustercheck_rw_split mode="755"
+  when: is_clustered_db
+
+- name: create clustercheck_read_write_all_nodes for testing
+  copy: src=clustercheck_read_write_all_nodes dest=/usr/bin/clustercheck_read_write_all_nodes mode="755"
+  when: is_clustered_db
+
+- name: create clustercheck sysconfig
+  template: src=clustercheck_sysconfig dest=/etc/sysconfig/clustercheck
+  when: is_clustered_db 
+
+- name: create xinetd service for galera monitoring
+  copy: src=galera-monitor dest=/etc/xinetd.d/galera-monitor
+  notify: restart xinetd
+  when: is_clustered_db

@@ -1,0 +1,130 @@
+---
+- name: ensure selinux is running in permissive mode
+  tags: ['always']
+  shell: setenforce 0
+  when: selinux_state != 'enabled'
+  ignore_errors: true
+
+- name: install keepalived + haproxy
+  tags:  install_packages
+  yum: name={{ item }} state={{installed_package_state}}
+  with_items: 
+    - keepalived
+    - haproxy
+
+- name: enable ip_nonlocal_bind
+  sysctl: name="net.ipv4.ip_nonlocal_bind" value=1 sysctl_set=yes state=present reload=yes
+
+- name: set up keepalived configuration file
+  template: src=keepalived.conf dest=/etc/keepalived/keepalived.conf
+  notify: restart keepalived
+
+- name: set up haproxy_rw_split configuration file
+  template: src=haproxy_rw_split.cfg dest=/etc/haproxy/haproxy.cfg
+  notify: restart haproxy
+  when: install_mysqlnd_ms
+
+- name: set up haproxy_read_write_all_nodes configuration file
+  template: src=haproxy_read_write_all_nodes.cfg dest=/etc/haproxy/haproxy.cfg
+  notify: restart haproxy
+  when: not install_mysqlnd_ms
+
+- name: template virtual IP master/slave config to {{mysqlnd_ms_json_path}}/mysqlnd_ms_haproxy.json
+  template: src=mysqlnd_ms_haproxy.json dest="{{mysqlnd_ms_json_path}}/mysqlnd_ms_haproxy.json"
+  tags:
+    - always
+  when: install_mysqlnd_ms
+
+- name: delete {{mysqlnd_ms_json_path}}/mysqlnd_ms_haproxy.json
+  file: path="{{mysqlnd_ms_json_path}}/mysqlnd_ms_haproxy.json" state=absent
+  tags:
+    - always
+  when: not install_mysqlnd_ms
+
+- name: slurp contents {{mysqlnd_ms_json_path}}/mysqlnd_ms_haproxy.json into var
+  slurp:
+    src: "{{mysqlnd_ms_json_path}}/mysqlnd_ms_haproxy.json"
+  register: mysqlnd_ms_haproxy_block
+  tags:
+    - always
+  when: install_mysqlnd_ms
+
+- name: check dest file {{mysqlnd_ms_json_path}}/{{mysqlnd_ms_json_filename}} exists
+  stat:
+    path: "{{mysqlnd_ms_json_path}}/{{mysqlnd_ms_json_filename}}"
+  register:  mysqlnd_ms_json_file_exists
+  tags:
+    - always
+  when: install_mysqlnd_ms
+
+- name: create default {{mysqlnd_ms_json_path}}/{{mysqlnd_ms_json_filename}} file if missing
+  template:
+    src: "../../php-fpm/templates/etc/php/mods-available/{{item.name}}"
+    dest: "{{item.path}}/{{item.name}}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - {name: "{{mysqlnd_ms_json_filename}}", path: "{{mysqlnd_ms_json_path}}" }
+  when: install_mysqlnd_ms and not mysqlnd_ms_json_file_exists.stat.exists
+  tags:
+    - always
+
+- name: add virtual IP master/slave block to {{mysqlnd_ms_json_path}}/{{mysqlnd_ms_json_filename}}
+  blockinfile:
+    dest: "{{mysqlnd_ms_json_path}}/{{mysqlnd_ms_json_filename}}"
+    block: "{{item.block}}"
+    marker: "{{item.marker}}"
+    state: present
+    create: no
+    backup: yes
+  when: install_mysqlnd_ms
+  with_items:
+    - {marker: ',"haproxy_block_{mark}":{"master": {"master_0": {"host": "haproxy_block_{mark}"} },"slave": {"slave_0": {"host": "haproxy_block_{mark}"}}}', block: "{{mysqlnd_ms_haproxy_block['content'] | b64decode}}"}
+  tags:
+    - always
+
+- name: fix {{mysqlnd_ms_json_path}}/{{mysqlnd_ms_json_filename}} to become valid json
+  replace:
+    dest: "{{mysqlnd_ms_json_path}}/{{mysqlnd_ms_json_filename}}"
+    regexp: "{{item.find}}"
+    replace: "{{item.replace}}"
+    backup: yes
+  with_items:
+    - {find: '"dummy"}}}}', replace: '"dummy"}}}', comment: 'remove closing brace from dummy if present'}
+    - {find: '"haproxy_block_END"}}}', replace: '"haproxy_block_END"}}} }', comment: 'add closing brace to closing comment '}
+  tags:
+    - always
+  when: install_mysqlnd_ms
+  notify:
+    - php-fpm restart
+    - php7-fpm restart
+
+
+  #unless vhost.conf is the first file to be picked up alphabetically bu ngix, we get forbidden when doing proxy-pass
+- name: make config for nginx
+  template: src=nginx-haproxy.conf
+            dest=/etc/nginx/conf.d/haproxy.conf
+            owner={{web_user}}
+            mode=0644
+  notify:
+    - nginx restart
+
+
+- name: set up rsyslog haproxy configuration file
+  template: src="etc-rsyslog-haproxy.conf" dest="/etc/rsyslog.d/haproxy.conf"
+
+- name: set up logrotate haproxy configuration file
+  template: src="etc-logrotate.d-haproxy" dest="/etc/logrotate.d/haproxy"
+
+- name: restart xinetd service
+  service: name=xinetd state=restarted enabled=yes
+
+- name: restart rsyslog service
+  service: name=rsyslog state=restarted enabled=yes
+
+- name: restart keepalived
+  service: name=keepalived state=restarted enabled=yes
+
+- name: restart haproxy
+  service: name=haproxy state=restarted enabled=yes

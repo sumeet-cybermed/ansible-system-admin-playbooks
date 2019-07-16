@@ -1,0 +1,69 @@
+
+- name: Install necessary packages for mounting cifs (apt)
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  tags:  install_packages
+  with_items:
+    - cifs-utils
+    - smbclient
+  when: "ansible_pkg_mgr == 'apt'"
+
+- name: Install necessary packages for mounting cifs (yum)
+  tags:  install_packages
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  with_items:
+    - cifs-utils
+    - samba-client
+  when: "ansible_pkg_mgr == 'yum'"
+  
+- name: "Create Developer & Other Group"
+  group: name={{ item.name }} gid={{item.id}} state=present
+  with_items:
+    - {name: "{{dev_groupname}}", id: "{{dev_groupid}}"}
+    - {name: "{{admin_groupname}}", id: "{{admin_groupid}}"}
+
+- name: "Ensure Home Dirs Exist"
+  file: path={{ item }}  state=directory 
+  with_items:
+    - "{{dev_userhomepath}}"
+    - "{{admin_userhomepath}}"
+  
+- name: "Create Developer user"
+  user: name={{dev_username }} uid={{dev_userid}} comment="{{ dev_usercomment }}" group={{ dev_groupname}} password={{ dev_userpassword }} state=present createhome=true home={{ dev_userhomepath }} update_password=always
+  
+- name: "Create Admin user"
+  user: name={{admin_username }} uid={{admin_userid}} comment="{{ admin_usercomment }}" groups="{{admin_groupname}}" password={{ admin_userpassword }} state=present createhome=true home={{ admin_userhomepath }} update_password=always
+  ignore_errors: true #incase already created in same task running on same pc when running many roles-types in local mode
+  
+- name: "Ensure Dirs are owned by the user"
+  file: path={{ item.path }}  state=directory owner={{item.user}} group=root 
+  with_items:
+    - { path: "{{dev_userhomepath}}", user: "{{dev_username}}" }
+    - { path: "{{admin_userhomepath}}", user: "{{admin_username}}" }
+    
+- name: "Add Admin user to sudoers"
+  user: name={{admin_username }} groups="{{item}}" state=present 
+  with_items:
+    - sudoers
+    - sudo
+  ignore_errors: true
+
+- name: configure sudoers
+  lineinfile: 
+    dest: /etc/sudoers 
+    backup: yes 
+    state: present 
+    line: "{{admin_username}}  ALL=(ALL:ALL) ALL"
+  # tags:  config-sudoers  
+    
+- name: "add admin user to web_group"
+  user: name={{ item }} groups={{ web_group }} append=yes
+  with_items:
+    # do not add devuser for now - will have access ionly via functions enabled in webui
+    # - "{{ dev_username }}"
+    - "{{ admin_username }}"
+
+- name: "Copy Host SMB Credentials"
+  template: src=root/dev_host_cifs_credentials.txt dest=/root/dev_host_cifs_credentials.txt owner=root group=root 
+
+- name: "Ensure Dir Exists {{ dev_guest_mapped_folder }}"
+  file: path={{ dev_guest_mapped_folder }}  state=directory 

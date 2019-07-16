@@ -1,0 +1,87 @@
+---
+## install virtualbox, etc
+- name: add virtualbox repo (apt)
+  apt_repository: "repo='deb http://download.virtualbox.org/virtualbox/debian {{ ansible_lsb.codename }} contrib' state=present"
+  when:  ansible_pkg_mgr=='apt' 
+  
+- name: Import virtualbox GPG key. (apt)
+  apt_key:
+    url: "https://www.virtualbox.org/download/oracle_vbox.asc"
+    state: present
+  when:  ansible_pkg_mgr=='apt'    
+  
+- name: install virtualbox (apt)
+  apt: name={{item}} state={{installed_package_state}}  update_cache=yes
+  with_items:
+    - virtualbox-5.0
+  when:  ansible_pkg_mgr=='apt'  
+
+###
+  
+- name: Install virtualbox repo. (yum)
+  get_url: 
+    url: "http://download.virtualbox.org/virtualbox/rpm/el/virtualbox.repo"
+    dest: "/etc/yum.repos.d/virtualbox.repo"
+  when:  ansible_pkg_mgr=='yum' 
+  
+- name: Import virtualbox GPG key. (yum)
+  rpm_key:
+    key: "https://www.virtualbox.org/download/oracle_vbox.asc"
+    state: present
+  when:  ansible_pkg_mgr=='yum'    
+
+
+- name: install virtualbox (yum)
+  yum: name={{item}} state={{installed_package_state}}
+  with_items:
+    - VirtualBox-5.0
+  when:  ansible_pkg_mgr=='yum'  
+  
+- name: build vn kernel modules (yum)
+  shell: "service vboxdrv setup"
+  with_items:
+    - VirtualBox-5.0
+  when:  ansible_pkg_mgr=='yum'  
+  ignore_errors: true
+  
+  
+- name: is vt/x enabled
+  shell: "cat /proc/cpuinfo| egrep "vmx|svm""
+  
+### extension pack
+- name: ensure virtualbox extension pack download dir exists
+  tags: [ 'always' ]
+  file: 
+    path: "/var/downloads/virtualbox/"
+    state: directory
+  register: virtualbox_check_downloaded  
+  
+- name: check if virtualbox extension pack is downloaded already
+  tags: [ 'always' ]
+  stat: 
+    path: "/var/downloads/virtualbox/{{virtualbox_extn_filename}}"
+  register: virtualbox_check_downloaded  
+  
+- name: Download virtualbox extension pack 
+  get_url: 
+    url="{{virtualbox_extn_url}}"
+    dest="/var/downloads/virtualbox/{{virtualbox_extn_filename}}"
+  when:  not virtualbox_check_downloaded.stat.exists
+
+- name: install vb extension pack (so guests of this machine will run well)
+  shell: "VBoxManage extpack install /var/downloads/virtualbox/{{virtualbox_extn_filename}}"
+  ignore_errors: true #on reinstallation
+  
+### guest additions
+- name: check if vb hardware is present
+  tags: [ 'always' ]
+  shell: lspci | grep VirtualBox
+  register: vb_hardware_present
+  ignore_errors: true
+
+- debug: var=vb_hardware_present  
+
+- name: install guest additions (so guest will run well under vb)  
+  include: guestadditions.yml
+  when: vb_hardware_present.rc==0
+  tags: ['always']

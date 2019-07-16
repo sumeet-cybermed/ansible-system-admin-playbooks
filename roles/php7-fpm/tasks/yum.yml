@@ -1,0 +1,122 @@
+---
+- name: Install remi repo. (yum)
+  tags:  install_packages
+  yum:
+    name: "{{ yum_remi_repo_url }}"
+    state: present
+  when: is_initial_run is defined
+  async: 30
+  poll: 3
+  ignore_errors: true #timeout is common
+  
+- name: Import remi GPG key. (yum)
+  tags:  install_packages
+  rpm_key:
+    key: "{{ yum_remi_repo_gpg_key_url }}"
+    state: present
+    validate_certs: no
+  when: is_initial_run is defined
+  ignore_errors: true
+  
+- name: Install PHP packages (ansible)
+  yum: "name={{ item }} state={{installed_package_state}} enablerepo=remi,remi-php{{php7_major_version}}"
+  tags:  install_packages
+  with_items:
+    - libyaml
+    - "php{{php7_major_version}}"
+    - "php{{php7_major_version}}-php-fpm"
+    - "php{{php7_major_version}}-php-opcache"
+    - "php{{php7_major_version}}-php-mysqlnd"
+    - "php{{php7_major_version}}-php-mbstring"
+    - "php{{php7_major_version}}-php-imap"
+    - "php{{php7_major_version}}-php-soap" 
+    - "php{{php7_major_version}}-php-xml"
+    - "php{{php7_major_version}}-php-ldap"
+    - "php{{php7_major_version}}-php-cli"
+    - "php{{php7_major_version}}-php-curl"
+    - "php{{php7_major_version}}-php-gd"
+    - "php{{php7_major_version}}-php-mysql"
+    - "php{{php7_major_version}}-php-devel"
+    - "php{{php7_major_version}}-php-openssl"
+    - "php{{php7_major_version}}-php-xdebug"
+  ignore_errors: no
+  when: is_initial_run is defined
+
+- name: Install PHP packages (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}} enablerepo=remi,remi-php{{php7_major_version}}"
+  with_items:
+    # - "php{{php7_major_version}}-php-pecl-apcu"
+    - "php{{php7_major_version}}-php-redis"
+    - "php{{php7_major_version}}-php-pecl-redis"
+  ignore_errors: yes
+
+
+
+- name: Install PHP packages (ansible)
+  yum: "name={{ item }} state={{installed_package_state}} enablerepo=remi,remi-php{{php7_major_version}}"
+  tags:  install_packages
+  with_items:
+     - "php{{php7_major_version}}-php-mysqlnd-ms"
+  ignore_errors: yes #php-mysqlnd-ms not yet available for php7??? todocms
+  when: is_initial_run is defined and install_mysqlnd_ms
+
+
+- name: Install PHP packages (ansible)
+  yum: "name={{ item }} state=absent"
+  tags:  install_packages
+  with_items:
+     - "php{{php7_major_version}}-php-mysqlnd-ms"
+  ignore_errors: yes #php-mysqlnd-ms not yet available for php7??? todocms
+  when: not install_mysqlnd_ms
+
+- name: copy/replace php-fpm conf file (yum)
+  template:
+    src: ../../php-fpm/templates/etc/php/fpm/pool.d/www.conf
+    dest: /etc/opt/remi/php{{php7_major_version}}/php-fpm.d/www.conf
+    owner: root
+    group: root
+    mode: 0755
+
+
+- name: copy extra php settings (yum)
+  template:
+    src: ../../php-fpm/templates/etc/php/mods-available/zz_php_custom_settings.ini
+    dest: /etc/opt/remi/php{{php7_major_version}}/php.d/zz_php_custom_settings.ini
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Register php mysqlnd_ms
+  template:
+    src: "../../php-fpm/templates/etc/php/mods-available/{{item.name}}"
+    dest: "{{item.path}}/{{item.name}}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - {name: mysqlnd_ms.ini, path: "/etc/opt/remi/php{{php7_major_version}}/php.d" }
+    - {name: mysqlnd_ms.json, path: "{{mysqlnd_ms_json_path}}" }
+  when: (install_mysqlnd_ms)
+
+
+- name: delete php mysqlnd_ms config
+  file:
+    path: "{{item.path}}/{{item.name}}"
+    state: absent
+  with_items:
+    - {name: mysqlnd_ms.ini, path: "/etc/opt/remi/php{{php7_major_version}}/php.d" }
+    - {name: mysqlnd_ms.json, path: "{{mysqlnd_ms_json_path}}" }
+  when: (not install_mysqlnd_ms)
+
+- name: set log permissions (needed for centos for pml to work)
+  command: chown -R {{ web_user }}:{{ web_group }} /var/log/php-fpm/      
+  ignore_errors: true
+    
+- name: set log permissions (needed for centos for pml to work)
+  command: chown -R {{ web_user }}:{{ web_group }} /var/log/php-fpm/      
+  ignore_errors: true
+  
+- name: enable autostart of php-fpm70 (yum)
+  service: name=php{{php7_major_version}}-php-fpm enabled=true state=restarted
+  sudo: yes

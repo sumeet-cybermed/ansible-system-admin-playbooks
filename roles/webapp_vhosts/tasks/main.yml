@@ -1,0 +1,48 @@
+---
+- debug: var={{item}}
+  with_items:
+    - sites
+    - webapp_extra_nginx_conf
+    - webapp_relativepath
+    - is_cluster
+    - cluster_master
+    - domain  
+    - webapp_php_domains
+    - webapp_php7_domains
+    - webapp_hhvm_domains
+ 
+- name: "Ensure Dir Exists {{ admin_doc_root }}/logs/config.user.d"
+  file: path={{ admin_doc_root }}/logs/config.user.d  state=directory  owner={{ web_user }} group={{ web_group }} 
+  sudo: yes
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+
+- name: "Enable PML viewing for {{ webapp }} {{ backend }}"
+  template: src=pimpmylog.json dest={{ admin_doc_root }}/logs/config.user.d/{{ webapp }}-{{ backend }}.json owner={{ web_user }} group={{ web_group }} 
+  with_items:
+    - "{{ domain }}"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+
+# As our earlier article on web server speed showed, Nginx servers static files faster than e.g. Varnish, and with this built-in proxy feature available, there is no real need to put Varnish in front of Nginx. In fact, Varnish as an extra step would only slow things down and increase point of failures.  
+# - name: "Set up cache alias for {{ webapp }} {{ backend }}"
+  # template: src=etc/nginx/cache.webapp.conf dest=/etc/nginx/conf.d/cache.{{ webapp }}-{{ backend }}.conf owner=root group=root mode=0644
+  # notify: nginx reload
+
+- name: "Set up {{ webapp }} - {{ backend }} - virtualhost"
+  template: src=etc/nginx/webapp.conf dest=/etc/nginx/conf.d/{{ webapp }}-{{ backend }}.conf owner=root group=root mode=0644
+  notify: nginx restart
+
+- name: "Set up {{ webapp_common_prefix }}_latest - {{ backend }} - virtualhost"
+  template: src=etc/nginx/webapp.conf dest=/etc/nginx/conf.d/{{ webapp_common_prefix }}_latest-{{ backend }}.conf owner=root group=root mode=0644
+  notify: nginx restart
+
+- name: "change server name for {{ webapp_common_prefix }}_latest - {{ backend }} - virtualhost"
+  replace:
+    dest: /etc/nginx/conf.d/{{ webapp_common_prefix }}_latest-{{ backend }}.conf
+    regexp: "{{webapp}}\\."
+    replace: "{{ webapp_common_prefix }}_latest."
+  notify: nginx restart
+
+
+- name: ensure nginx is restarted using defined handler
+  command: /bin/true
+  notify: nginx restart

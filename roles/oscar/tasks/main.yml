@@ -1,0 +1,21 @@
+---
+
+- name: create dir for downloading Oscar 
+  command: mkdir -p /var/downloads/oscar
+  when: "ansible_pkg_mgr == 'apt'"  
+  # tags:  [ 'oscar' ]
+  
+- name: download Oscar (apt)  
+  get_url: url={{ apt_oscar_url }}/{{ apt_oscar_deb_file_name }} dest={{ apt_oscar_local_download_dir }}/{{ apt_oscar_deb_file_name }}
+  when: "ansible_pkg_mgr == 'apt'"  
+  # tags:  [ 'oscar' ]
+
+- name: install Oscar manually! (apt)
+  shell: echo 'Install Oscar from root prompt using dpkg -i {{ apt_oscar_local_download_dir }}/{{ apt_oscar_deb_file_name }}'
+  when: "ansible_pkg_mgr == 'apt'"  
+  # tags:  [ 'oscar' ]
+  
+- name: ensure tomcat is restarted using defined handler
+  command: /bin/true
+  notify: restart tomcat
+  

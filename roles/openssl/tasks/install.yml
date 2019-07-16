@@ -1,0 +1,42 @@
+---
+
+- name: Installing packages with APT
+  tags:  install_packages
+  apt:
+    pkg: "{{ item }}"
+    state: present
+  when: ansible_pkg_mgr == 'apt'
+  with_items:
+    - openssl
+
+- name: Installing packages with PACMAN
+  tags:  install_packages
+  pacman:
+    pkg: "{{ item }}"
+    state: present
+  when: ansible_pkg_mgr == 'pacman'
+  with_items:
+    - openssl
+
+- name: Installing packages with YUM
+  tags:  install_packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  when: ansible_pkg_mgr == 'yum'
+  with_items:
+    - openssl
+
+- name: Creating certs dir
+  tags: ['always']
+  include: create_dir.yml
+  vars:
+    item: "{{ openssl_certs_path }}"
+    mode: "0755"
+
+- name: Creating keys dir
+  tags: ['always']
+  include: create_dir.yml
+  vars:
+    item: "{{ openssl_keys_path }}"
+    mode: "0700"

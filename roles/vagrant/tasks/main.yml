@@ -1,0 +1,157 @@
+---
+## install virtualbox, etc
+- name: install dependencies 
+  apt: name={{item}} state={{installed_package_state}}
+  with_items:
+    # - libvirt
+    - libvirt-dev
+    - qemu-utils
+    - git
+  when:  ansible_pkg_mgr=='apt' 
+
+- name: install dependencies 
+  yum: name={{item}} state={{installed_package_state}}
+  tags:  install_packages
+  with_items:
+    # - libvirt
+    - libvirt-devel
+    - ruby-libvirt
+    - qemu-img
+  when:  ansible_pkg_mgr=='yum'  
+
+### installed?
+- name: Check if vagrant is installed
+  tags: [ 'always' ]
+  command: "{{vagrant_is_installed_shell_command}}"
+  failed_when: vagrant_check_installed.rc > 1
+  changed_when: vagrant_check_installed.rc == 1
+  register: vagrant_check_installed
+
+### download package
+- name: check if vagrant is downloaded already (apt)
+  tags: [ 'always' ]
+  stat: 
+    path: "/var/downloads/vagrant/{{vagrant_filename}}.deb"
+  when: ansible_pkg_mgr=='apt' and vagrant_check_installed.rc == 1
+  register: vagrant_check_downloaded  
+  
+- name: Download vagrant.deb (apt)
+  get_url: 
+    url="{{ vagrant_url }}"
+    dest="/var/downloads/vagrant/{{vagrant_filename}}.deb"
+  when:  ansible_pkg_mgr=='apt' and vagrant_check_installed.rc == 1 and not vagrant_check_downloaded.stat.exists
+
+- name: check if vagrant is downloaded already (yum)
+  tags: [ 'always' ]
+  stat: 
+    path: "/var/downloads/vagrant/{{vagrant_filename}}.rpm"
+  register: vagrant_check_downloaded
+  when: ansible_pkg_mgr=='yum' and vagrant_check_installed.rc == 1
+    
+- name: Download vagrant.rpm (yum)
+  tags:  install_packages
+  get_url: 
+    url="{{ vagrant_url }}"
+    dest="/var/downloads/vagrant/{{vagrant_filename}}.rpm"
+  when: ansible_pkg_mgr=='yum' and vagrant_check_installed.rc == 1 and not vagrant_check_downloaded.stat.exists
+
+ ### install package
+- name: Install vagrant (apt)
+  tags:  install_packages
+  apt: deb="/var/downloads/vagrant/{{vagrant_filename}}.deb"
+  when: ansible_pkg_mgr=='apt' and vagrant_check_installed.rc == 1
+
+- name: Install vagrant (yum)
+  tags:  install_packages
+  yum: name="/var/downloads/vagrant/{{vagrant_filename}}.rpm"
+  sudo: true
+  when: ansible_pkg_mgr=='yum' and vagrant_check_installed.rc == 1
+
+##change VAGRANT_DOTFILE_PATH to avoid conflicts in /vagrant folder shared from host  
+
+- name: Check whether VAGRANT_DOTFILE_PATH line has been added to file already!
+  tags: [ 'always' ]
+  shell: grep -Fxq "{{ vagrant_set_env[:50]}}" /etc/environment
+  register: lineexists
+  always_run: True
+  ignore_errors: True
+  changed_when: False
+  
+- debug: var=lineexists  
+
+- name: set VAGRANT_DOTFILE_PATH
+  lineinfile:
+    line: "{{vagrant_set_env}}"
+    dest: "/etc/environment"
+    state: present
+  ignore_errors: true  
+  when: lineexists.rc != 0
+  
+###plugins
+ 
+- name: install vagrant plugins
+  shell: vagrant plugin install {{item}}
+  with_items:
+    - vagrant-hostsupdater
+    - vagrant-share
+    - vagrant-triggers
+    - vagrant-mutate
+    - vagrant-rekey-ssh
+  ignore_errors: true
+  when: vagrant_check_installed.rc is defined and vagrant_check_installed.rc == 1  
+  
+# - name: install vagrant util plugins
+  # shell: vagrant plugin install {{item}}
+  # with_items:
+    # - vagrant-multiprovider-snap
+  # ignore_errors: true
+  # when: vagrant_check_installed.rc is defined and vagrant_check_installed.rc == 1    
+  
+  
+# provider plugins  
+
+#  
+- name: include provider plugin specific files - lxc
+  include: vagrant-lxc.yml
+  when: vagrant_providers is defined and 'vagrant-lxc' in vagrant_providers
+  tags: ['always']
+  
+#  
+- name: include provider plugin specific files  - xenserver   
+  include: vagrant-xenserver.yml
+  when: vagrant_providers is defined and 'vagrant-xenserver' in vagrant_providers
+  tags: ['always']
+
+  #  
+- name: include provider plugin specific files - libvirt
+  include: vagrant-libvirt.yml
+  when: vagrant_providers is defined and 'vagrant-libvirt' in vagrant_providers
+  tags: ['always']
+
+# - vagrant-aws
+# - vagrant-azure
+# - vagrant-brightbox
+# - vagrant-cloudstack
+# - vagrant-digitalocean
+# - vagrant-ganeti
+# - vagrant-google
+# - vagrant-hp
+# - vagrant-joyent
+# - vagrant-kvm(Thisprojectisdead,pleaseusevagrant-libvirtinstead.)
+# - vagrant-libvirt
+# - vagrant-xenserver
+# - vagrant-lxc
+# - vagrant-managed-servers
+# - vagrant-openstack-provider
+# - vagrant-openvz
+# - vagrant-parallels
+# - vagrant-proxmox
+# - vagrant-rackspace
+# - vagrant-softlayer
+# - vagrant-vcenter
+# - vagrant-vcloud
+# - vagrant-vcloudair
+# - vagrant-vmware-appcatalyst
+# - vagrant-vsphere
+# - vagrant-vultr
+# - vagrant-windows-hyperv

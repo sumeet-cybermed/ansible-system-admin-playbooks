@@ -1,0 +1,34 @@
+------------------------------
+1. cluster control
+------------------------------
+for cmon cannot connect to db errors:
+------------------------------
+#
+nano /etc/cmon.cnf
+mysql_port=3306
+mysql_hostname=127.0.0.1
+mysql_password=cmon
+hostname=127.0.0.1
+mysql_basedir=/var/lib/mysql/
+os_user=root
+#
+nano /root/.my.cnf
+[client]
+port = 3306
+socket=/var/lib/mysql/mysql.sock
+user=cmon
+password=cmon
+
+------------------------------
+2. zabbix server: cannot connect to live
+------------------------------
+
+on live:
+
+iptables -I INPUT -p TCP -s 172.16.70.190 -j ACCEPT
+/sbin/service iptables save
+
+on uat:
+
+iptables -I INPUT -p TCP -s 172.16.70.189 -j ACCEPT
+/sbin/service iptables save

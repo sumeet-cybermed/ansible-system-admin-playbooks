@@ -1,0 +1,17 @@
+---
+
+- include: install.yml
+  tags:
+    - web
+    - htpasswd
+    - install
+    - htpasswd-install
+    - always
+
+- include: manage.yml
+  tags:
+    - web
+    - htpasswd
+    - manage
+    - htpasswd-manage
+    - always

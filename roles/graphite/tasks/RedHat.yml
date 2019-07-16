@@ -1,0 +1,21 @@
+- name: install graphite and deps
+  yum: name="{{ item }}" state={{installed_package_state}} enablerepo=remi,remi-php{{php5_major_version}}
+  with_items: packages
+
+- name: "Install Twisted 15.3.0 on 6.x (never versions req python 2.7)"
+  pip: name=Twisted==15.3.0
+  when: ansible_distribution_version.split(".")[0]|int < 7
+
+- name: Install uwsgi with pip
+  pip: name=uwsgi state=present
+
+- name: Install uwsgi init.d script
+  template: src=redhat_uwsgi_service dest=/etc/init.d/uwsgi
+  notify: restart uwsgi
+  when: false
+
+- name: Install uwsgi systemd script
+  template: src=redhat_uwsgi_service_7 dest=/etc/systemd/system/uwsgi.service
+
+
+

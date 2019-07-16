@@ -1,0 +1,10 @@
+- debug: msg="{{item}}"
+  with_items:
+    - "admin_userpassword: {{admin_userpassword}}"
+    - "http_auth_userpassword: {{http_auth_userpassword}}"
+    - "backup_userpassword: {{backup_userpassword}}"
+    - "dev_userpassword: {{dev_userpassword}}"
+    - "root_securepassword: {{root_securepassword}}"
+    - "vagrant_securepassword: {{vagrant_securepassword}}"
+    - "mysql_root_secure_password: {{mysql_root_secure_password}}"
+  ignore_errors: true

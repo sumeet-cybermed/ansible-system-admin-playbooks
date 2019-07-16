@@ -1,0 +1,8 @@
+---
+- name: Install freemedforms (apt)
+  tags:  install_packages
+  apt: name={{ item}} state={{installed_package_state}} force=yes
+  with_items:
+    - freemedforms-project
+  when: "ansible_pkg_mgr == 'apt'"
+  

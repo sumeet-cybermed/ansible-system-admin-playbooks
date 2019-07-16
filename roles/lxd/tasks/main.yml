@@ -1,0 +1,17 @@
+- name: Run Pre  Tasks
+  include: pre.yml
+  tags: ['always']
+
+- name: Run YUM  Tasks 
+  include: yum.yml
+  when: "ansible_pkg_mgr=='yum'"
+  tags: ['always']
+  
+- name: Run APT Tasks 
+  include: apt.yml
+  when: "ansible_pkg_mgr=='apt'"
+  tags: ['always']
+        
+- name: Run Post  Tasks
+  include: post.yml
+  tags: ['always']

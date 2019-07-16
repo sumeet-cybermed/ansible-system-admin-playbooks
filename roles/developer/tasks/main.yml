@@ -1,0 +1,70 @@
+# # # ---
+# # ##########\
+
+# - name: install dependencies
+  # apt: name={{item}} state={{installed_package_state}}
+  # with_items:
+    # - pkg-config
+    
+- name: "add Developer user to web_group"
+  user: name={{ item }} groups={{ web_group }} append=yes
+  with_items:
+    - "{{ dev_username }}"
+    - vagrant
+   
+# phpstorm   
+- name: check if phpstorm is downloaded already (apt)
+  tags: [ 'always' ]
+  stat: 
+    path: "/var/downloads/ide/phpstorm/{{phpstorm_filename}}"
+  register: phpstorm_check_deb_downloaded  
+  
+- name: Download phpstorm.tar
+  get_url: 
+    url="{{ phpstorm_url }}"
+    dest="/var/downloads/ide/phpstorm/{{phpstorm_filename}}"
+  when:  not phpstorm_check_deb_downloaded.stat.exists
+  
+- name: Install phpstorm 
+  shell: "tar -C {{phpstorm_home_up}} -xzf /var/downloads/ide/phpstorm/{{phpstorm_filename}}"
+
+- name: create symlink for phpstorm binary
+  file: 
+    src: "{{phpstorm_bin}}"
+    dest: "{{item.dest}}/phpstorm.sh"
+    state: link
+    force: yes
+    owner: "{{item.owner}}"
+  with_items:
+    - {dest: "/root/Desktop", owner: "root"}
+    - {dest: "/usr/local/bin", owner: "root"}
+    - {dest: "/home/vagrant/Desktop", owner: "vagrant"}
+    - {dest: "/home/{{dev_username}}/Desktop", owner: "{{dev_username}}"}
+  ignore_errors: true
+  
+- name: create launch sudo script symlink for phpstorm binary
+  template:
+    src: phpstorm.sh
+    dest: "{{item.dest}}/phpstorm_root.sh"
+    owner: "{{item.owner}}"
+    mode: 0666
+  with_items:
+    - {dest: "/root/Desktop", owner: "root"}
+    - {dest: "/usr/local/bin", owner: "root"}
+    - {dest: "/home/vagrant/Desktop", owner: "vagrant"}
+    - {dest: "/home/{{dev_username}}/Desktop", owner: "{{dev_username}}"}
+  ignore_errors: true
+  
+# # - name: extract canned phpStorm settings into user home dirs
+  # # unarchive:
+    # # src: "/var/downloads/ide/phpstorm/.WebIde90.tar"
+    # # dest: "{{item.dest}}temp"
+    # # owner: "{{item.owner}}"
+    # # mode: 0775
+  # # with_items:
+    # # - {dest: "/root/", owner: "root"}
+    # # # - {dest: "/home/vagrant/", owner: "vagrant"}
+    # # # - {dest: "/home/{{dev_username}}/", owner: "{{dev_username}}"}
+  # # ignore_errors: true
+  
+  

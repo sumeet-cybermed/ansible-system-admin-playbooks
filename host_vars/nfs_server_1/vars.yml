@@ -1,0 +1,27 @@
+nfs_shares:
+    - path: "{{backup_dir_rdiff}}"
+      clients: "{{lb.internal_subnet}}"
+      rights: "fsid=0,rw,all_squash,no_subtree_check,anonuid={{backup_userid}},anongid={{backup_groupid}}"
+      owner: "{{backup_username}}"
+      group: "{{backup_groupname}}"
+
+    - path: "/var/nfs_shares/webapps"
+      clients: "{{lb.internal_subnet}}"
+      #share as mount root all_squash : masquerade all users as anonymous,anonuid={{web_userid}},anongid={{web_groupid}}: escalate anon user to nginx
+      rights: "fsid=0,rw,all_squash,no_subtree_check,anonuid={{web_userid}},anongid={{web_groupid}}"
+      owner: "{{web_user}}"
+      group: "{{web_group}}"
+
+    - path: "/var/nfs_shares/webapps/ccrm/cache"
+      clients: "{{lb.internal_subnet}}"
+      #share as mount root all_squash : masquerade all users as anonymous,anonuid={{web_userid}},anongid={{web_groupid}}: escalate anon user to nginx
+      rights: "rw,all_squash,no_subtree_check,anonuid={{web_userid}},anongid={{web_groupid}}"
+      owner: "{{web_user}}"
+      group: "{{web_group}}"
+
+    - path: "/var/nfs_shares/webapps/ccrm/upload"
+      clients: "{{lb.internal_subnet}}"
+      #share as mount root all_squash : masquerade all users as anonymous,anonuid={{web_userid}},anongid={{web_groupid}}: escalate anon user to nginx
+      rights: "rw,all_squash,no_subtree_check,anonuid={{web_userid}},anongid={{web_groupid}}"
+      owner: "{{web_user}}"
+      group: "{{web_group}}"

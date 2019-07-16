@@ -1,0 +1,5 @@
+# - name: enable debian unstable releases
+  # apt_repository: repo="deb http://http.debian.net/debian/ sid all" state=present update_cache=no
+  
+# - name: enable debian unstable source releases
+  # apt_repository: repo="deb-src http://http.debian.net/debian/ sid all" state=present update_cache=no

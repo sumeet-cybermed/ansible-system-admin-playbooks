@@ -1,0 +1,17 @@
+---
+- name: restart keepalived
+  service: name=keepalived state=restarted
+
+- name: restart haproxy
+  service: name=haproxy state=restarted
+
+- name: restart rsyslog
+  service: name=rsyslog  state=restarted
+
+- name: php-fpm restart
+  service: name=php-fpm state=restarted enabled=yes
+  ignore_errors: yes
+
+- name: php7-fpm restart
+  service: name=php{{php7_major_version}}-php-fpm state=restarted enabled=yes
+  ignore_errors: yes

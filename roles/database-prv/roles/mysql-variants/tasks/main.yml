@@ -1,0 +1,26 @@
+---
+- name: Run Pre MySQL Variants Tasks
+  include: pre.yml
+  tags: ['always']
+  
+########  
+- name: Install Oracle MySQL
+  include: mysql.yml
+  when: "db_variant=='mysql' "
+  tags: ['always']
+  
+- name: Install MariaDB
+  include: mariadb.yml
+  when: "db_variant=='mariadb'"
+  tags: ['always']
+
+- name: Install Percona
+  include: percona.yml
+  when: "db_variant=='percona'"    
+  tags: ['always']
+    
+      
+########
+- name: Run Post MySQL Variants Tasks
+  include: post.yml
+  tags: ['always']

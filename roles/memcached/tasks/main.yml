@@ -1,0 +1,14 @@
+---
+
+- name: Install memcached server
+  action: "{{ ansible_pkg_mgr }} name=memcached state=present"
+  tags:  install_packages
+
+- name: Do memcached config
+  template: src=etc/memcached.conf dest=/etc/memcached.conf owner=root group=root mode=0644
+  notify: memcached restart
+   
+- name: enable autostart of memcached
+  service: name=memcached enabled=true state=restarted
+  sudo: yes
+   

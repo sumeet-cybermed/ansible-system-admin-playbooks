@@ -1,0 +1,119 @@
+---
+# CentOS specific package installations
+- name: Add the OS specific variables
+  tags: [ 'always' ]
+  include_vars: "{{ ansible_os_family }}.yml"
+
+- include: RedHat.yml
+  tags: install_packages
+  when: ansible_os_family  == "RedHat"
+
+- name: Install uwsgi default settings
+  template: src=redhat_uwsgi_default.ini dest={{graphite_conf}}/uwsgi_default.ini
+  notify: restart uwsgi
+
+- name: Install uwsgi graphite config
+  template: src=uwsgi_graphite.ini dest={{graphite_conf}}/uwsgi_graphite.ini
+  notify: restart uwsgi
+
+- name: Install uwsgi.py
+  template: src=wsgi.py dest={{graphite_dir}}/wsgi.py
+
+- name: set directory permissions
+  tags: [ 'always' ]
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{web_user}}"
+    group: "{{web_group}}"
+    recurse: yes
+  with_items:
+    - "{{ graphite_log_dir }}"
+    - "{{ graphite_var }}"
+    - "{{ graphite_whisper_dir }}"
+    - "{{ graphite_storage_dir }}"
+    - "{{ graphite_conf }}"
+    - "{{ graphite_content_dir }}"
+
+- name: ensure file exists
+  tags: [ 'always' ]
+  file:
+    path: "{{ item }}"
+    state: touch
+    owner: "{{web_user}}"
+    group: "{{web_group}}"
+  with_items:
+      - "{{ uwsgi_graphite_pid }}"
+  ignore_errors: true
+
+# Ubuntu specific package installations
+- include: Debian.yml
+  tags: install_packages
+  when: ansible_os_family  == "Debian"
+
+
+- name: copy initial graphite data
+  copy: src={{ ansible_os_family}}/graphite-dump.json dest={{ graphite_python }}/initial_data.json
+
+- name: start mysqld
+  service: name={{ mysql_service }} state=started enabled=true pattern="[  OK  ]"
+  async: 5
+  poll: 1
+  ignore_errors: true #spurious mysql service problem on centos
+
+- name: create graphite db
+  mysql_db: name=graphite state=present
+
+- name: copy django/graphite settings
+  template: src=local_settings.py dest={{ graphite_conf }}/local_settings.py
+  notify: restart apache
+
+- name: setup carbon conf
+  template: src=carbon.conf dest=/etc/carbon/carbon.conf
+  notify: restart carbon-cache
+
+- name: setup storage schemas
+  copy: src=storage-schemas.conf dest=/etc/carbon/storage-schemas.conf
+  notify: restart carbon-cache
+
+- name: find state of graphite db
+  command:  "python {{ graphite_python }}/manage.py inspectdb"
+  register: result
+  changed_when: False
+
+- name: prep graphite db
+  command: "python {{ graphite_python }}/manage.py syncdb --noinput"
+  when: result.stdout.find('account_mygraph') == -1
+
+- name: load initial data
+  command: "python {{ graphite_python }}/manage.py loaddata {{ graphite_python }}/initial_data.json"
+  when: result.stdout.find('account_mygraph') == -1
+  ignore_errors: true
+
+- name: setup apache
+  template: src=apache2-graphite.conf dest=/etc/apache2/sites-available/default
+  notify: restart apache
+  when: webserver_type == 'Apache'
+
+- name: configure wsgi
+  file: path=/etc/apache2/wsgi state=directory
+  when: webserver_type == 'Apache'
+
+- name: setup nginx
+  template: src=nginx-graphite.conf dest=/etc/nginx/conf.d/graphite.conf
+  notify: nginx restart
+  when: webserver_type == 'nginx'
+
+
+- name: enable httpd, carbon
+  service: name={{ item }} enabled=yes state=restarted
+  with_items:
+  - "{{ apache_service }}"
+  - carbon-cache
+
+- name: enable uwsgi
+  service: name={{ item }} enabled=yes state=restarted
+  with_items:
+  - uwsgi
+  ignore_errors: true #service has an issue - can run via command line works!!
+

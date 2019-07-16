@@ -1,0 +1,81 @@
+---
+
+#
+# variables needed to be defined in user's playbook
+#
+prometheus_server_http_port: 9090
+prometheus_server_protocol: http
+prometheus_server_http_addr: "127.0.0.1"
+
+prometheus_alertmanager_url: "http://{{lb.external_bind_address}}:9093/"
+
+#prometheus_alertmanager_conf: some/path/alertmanager.yml
+node_exporter_server_protocol: http
+node_exporter_server_http_addr: "127.0.0.1"
+node_exporter_server_http_port: 9100
+
+mysqld_exporter_server_protocol: http
+mysqld_exporter_server_http_addr: "127.0.0.1"
+mysqld_exporter_server_http_port: 9104
+
+#
+# user-configurable defaults
+#
+
+prometheus_user:   prometheus
+prometheus_group:  prometheus
+
+prometheus_version:                 1.0.0
+prometheus_node_exporter_version:   0.12.0
+prometheus_mysqld_exporter_version:   0.7.1
+prometheus_alertmanager_version:    0.3.0
+
+gosu_version: 1.9
+prometheus_go_version:   1.6.2
+
+
+prometheus_install_path:         /opt/prometheus
+prometheus_config_path:          /etc/prometheus
+prometheus_rule_path:            "{{ prometheus_config_path }}/rules"
+prometheus_file_sd_config_path:  "{{ prometheus_config_path }}/tgroups"
+prometheus_db_path:              /var/lib/prometheus
+prometheus_log_path:             /var/log/prometheus
+prometheus_pid_path:             /var/run/prometheus
+prometheus_alertmanager_db_path: /var/lib/alertmanager
+
+
+prometheus_download_path: /tmp
+prometheus_workdir:       "{{ prometheus_download_path }}/prometheus_workdir"
+prometheus_goroot:        "{{ prometheus_workdir }}/go"
+prometheus_gopath:        "{{ prometheus_workdir }}/gopath"
+
+
+prometheus_clean_tarball:     true
+
+
+# rebuild each time?  (only applied to `git` version)
+prometheus_rebuild:           false
+
+#for prometheus.yml: mysql static targets
+prometheus_mysqld_static_targets: "{% for node in groups['cluster'] %}'mysqld_exporter.{{ hostvars[node].ansible_host }}',{% endfor %}'mysqld_exporter.{{lb.internal_bind_address}}'"
+
+#for prometheus.yml: node static targets
+prometheus_node_static_targets: "{% for node in groups['cluster'] %}'node_exporter.{{ hostvars[node].ansible_host }}',{% endfor %}'node_exporter.{{lb.internal_bind_address}}'"
+
+#for prometheus host /etc/hosts/file: mysql static targets
+prometheus_mysqld_static_targets_host_entries: "{% for node in groups['cluster'] %}{{ hostvars[node].ansible_host }} mysqld_exporter.{{ hostvars[node].ansible_host }}\n{% endfor %}{{lb.internal_bind_address}} mysqld_exporter.{{lb.internal_bind_address}}\n"
+
+#for prometheus host /etc/hosts/file: node static targets
+prometheus_node_static_targets_host_entries: "{% for node in groups['cluster'] %}{{ hostvars[node].ansible_host }} node_exporter.{{ hostvars[node].ansible_host }}\n{% endfor %}{{lb.internal_bind_address}} node_exporter.{{lb.internal_bind_address}}\n"
+
+#for prometheus host /etc/hosts/file: combined static targets
+prometheus_server_static_targets_host_entries: "{{prometheus_mysqld_static_targets_host_entries}}{{prometheus_node_static_targets_host_entries}}"
+
+#
+# derived variables; internal use only.
+#
+
+
+#---- the following vars are handled in tasks/set-role-variables.yml ------
+
+#prometheus_node_exporter_use_systemd: False  # use "systemd" to start/restart service?

@@ -1,0 +1,24 @@
+
+  
+# - name: Install MySQL ppa repo
+  # apt_repository: repo='ppa:ondrej/mysql-5.6' state=present update_cache=yes
+  # when: "db_type=='mysql' and (db_variant=='mysql')"
+    
+# - name: Add MariaDB apt key (apt)
+  # apt_key: url=http://keyserver.ubuntu.com/pks/lookup?op=get&fingerprint=on&search=0xcbcb082a1bb943db
+  # when: "(db_type=='mysql') and (db_variant=='mariadb')"
+  
+# - name: Add MariaDB apt repository (apt)
+  # apt_repository: repo='deb {{ apt_mariadb_repo_url }}' update_cache=yes
+  # when: "(db_type=='mysql') and (db_variant=='mariadb')"
+   
+# - name: Install Percona GPG key
+  # apt_key: data="{{ lookup('file', '../templates/percona-gpg-key') }}"
+  # when: "db_type=='mysql' and db_variant=='percona'"
+  # # tags:  [ 'percona', 'database' ]
+    
+# - name: Enable Percona repo
+  # apt_repository: repo='deb http://repo.percona.com/apt {{ ansible_lsb.codename }} main' state=present update_cache=yes
+  # when: "db_type=='mysql' and db_variant=='percona'"
+  # # tags:  [ 'percona', 'database' ]
+

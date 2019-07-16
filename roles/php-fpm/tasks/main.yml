@@ -1,0 +1,33 @@
+- name: Gather Default Variables
+  tags: ['always']
+  include_vars: "{{ item }}"
+  with_first_found: #from more specific to less specific - ?the more specific file could in turn include less specific files?
+    - "../vars/default.yml"
+  
+- debug: var=php5_major_version
+- debug: var=php5_conf_path
+- debug: var=php5_fpm_conf_path
+- debug: var=php5_fpm_pool_path
+- debug: var=php5_custom_modules_path
+- debug: var=php5_fix_modules_path
+
+# create opcache file cache dir
+- file: path={{ opcache_file_cache_path }} state=directory owner={{web_user }}  group={{ web_group}}
+  tags: ['always']
+
+- name: Run APT Specific Tasks 
+  include: apt.yml
+  when: "ansible_pkg_mgr=='apt'"
+  tags: ['always']
+  
+- name: Run YUM Specific Tasks 
+  include: yum.yml
+  when: "ansible_pkg_mgr=='yum'"
+  tags: ['always']
+  
+- name: run post tasks  
+  include: post.yml
+  tags: ['always']
+  
+  
+  

@@ -1,0 +1,40 @@
+---
+
+#
+is_cluster: True
+
+#bugCMS: suitecrm performance on gluster is terrible due to volatile cache directory - so disable
+#ensure no space before of after true in jinja filter
+
+#
+##
+firewall_state: disabled
+selinux_state: disabled
+
+#must listen on another port as haproxy will bind to any of the cluster machines at :80 & :443
+#sumeet: keep standard ports so server monitoring tools work and ensure nginx binds only to NIC ips though
+nginx_listen_port: "{% if is_cluster and is_part_of_cluster %}80{% else %}80{% endif %}"
+#must listen on another port as haproxy will bind to any of the cluster machines at :80 & :443
+nginx_secure_listen_port: "{% if is_cluster and is_part_of_cluster %}443{% else %}443{% endif %}"
+
+
+
+#modify nginx domains for relay from public ip
+webapp_hhvm_domains:
+    - "hhvm.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+    - "hhvm.{{webapp}}.{{external_ip_address}}"
+    - "hhvm.{{webapp}}.{{ansible_hostname}}"
+
+webapp_php_domains:
+    - "default"
+    - "{{webapp}}.{{lb.external_loadbalanced_ip}}"
+    - "php5.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+    - "{{webapp}}.{{external_ip_address}}"
+    - "php5.{{webapp}}.{{external_ip_address}}"
+    - "{{webapp}}.{{ansible_hostname}}"
+    - "php5.{{webapp}}.{{ansible_hostname}}"
+
+webapp_php7_domains:
+    - "php7.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+    - "php7.{{webapp}}.{{external_ip_address}}"
+    - "php7.{{webapp}}.{{ansible_hostname}}"

@@ -1,0 +1,6 @@
+#Modify the log rotate config to match the new folder:
+/var/log/haproxy/*.log {
+    daily
+    rotate 10
+    missingok
+[...]

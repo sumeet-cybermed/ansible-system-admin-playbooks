@@ -1,0 +1,2 @@
+
+vagrant_is_installed_shell_command: "{% if ansible_pkg_mgr=='apt' %}dpkg-query -W vagrant{% else %}rpm -q vagrant{% endif %}"

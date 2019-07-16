@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<virtualHostTemplate>
+  <vhRoot>$SERVER_ROOT/vhost/$VH_NAME/</vhRoot>
+  <configFile>$SERVER_ROOT/conf/$VH_NAME.xml</configFile>
+  <smartKeepAlive>1</smartKeepAlive>
+  <allowSymbolLink>1</allowSymbolLink>
+  <enableScript>1</enableScript>
+  <restrained>1</restrained>
+  <setUIDMode>2</setUIDMode>
+  <virtualHostConfig>
+    <docRoot>$VH_ROOT/public_html/</docRoot>
+    <enableGzip>1</enableGzip>
+    <logging>
+      <log>
+        <useServer>1</useServer>
+      </log>
+      <accessLog>
+        <useServer>0</useServer>
+        <fileName>$SERVER_ROOT/logs/$VH_NAME.access.log</fileName>
+        <logHeaders>3</logHeaders>
+        <rollingSize>10M</rollingSize>
+        <keepDays>30</keepDays>
+        <compressArchive>1</compressArchive>
+      </accessLog>
+    </logging>
+    <index>
+      <useServer>1</useServer>
+      <indexFiles>index.php, index.html</indexFiles>
+      <autoIndex>0</autoIndex>
+      <autoIndexURI>/_autoindex/default.php</autoIndexURI>
+    </index>
+    <scriptHandlerList>
+      <scriptHandler>
+        <suffix>php</suffix>
+        <type>lsapi</type>
+        <handler>$VH_NAME_lsphp</handler>
+      </scriptHandler>
+    </scriptHandlerList>
+    <expires>
+      <enableExpires>1</enableExpires>
+    </expires>
+    <security>
+      <accessControl>
+        <allow>*</allow>
+      </accessControl>
+    </security>
+    <extProcessorList>
+      <extProcessor>
+        <type>lsapi</type>
+        <name>$VH_NAME_lsphp</name>
+        <address>uds://tmp/lshttpd/$VH_NAME_lsphp.sock</address>
+        <maxConns>35</maxConns>
+        <env>PHP_LSAPI_MAX_REQUESTS=10000</env>
+        <env>PHP_LSAPI_CHILDREN=35</env>
+        <initTimeout>60</initTimeout>
+        <retryTimeout>0</retryTimeout>
+        <persistConn>1</persistConn>
+        <pcKeepAliveTimeout>30</pcKeepAliveTimeout>
+        <respBuffer>0</respBuffer>
+        <autoStart>1</autoStart>
+        <path>/usr/bin/lsphp</path>
+        <backlog>100</backlog>
+        <instances>1</instances>
+        <extUser>{{ web_user }}</extUser>
+        <extGroup>{{ web_group }}</extGroup>
+        <umask>022</umask>
+        <runOnStartUp>0</runOnStartUp>
+        <extMaxIdleTime>60</extMaxIdleTime>
+        <priority>0</priority>
+        <memSoftLimit>{{ mem_soft_limit}}</memSoftLimit>
+        <memHardLimit>{{ mem_hard_limit }}</memHardLimit>
+        <procSoftLimit>{{ proc_soft_limit }}</procSoftLimit>
+        <procHardLimit>{{ proc_hard_limit }}</procHardLimit>
+      </extProcessor>
+    </extProcessorList>
+    <contextList>
+      <context>
+        <type>cgi</type>
+        <uri>/cgi-bin/</uri>
+        <location>$VH_ROOT/cgi-bin/</location>
+      </context>
+    </contextList>
+    <rewrite>
+      <enable>0</enable>
+      <logLevel>0</logLevel>
+    </rewrite>
+    <vhssl>
+    </vhssl>
+    <moduleList>
+      <module>
+        <name>cache</name>
+      </module>
+    </moduleList>
+  </virtualHostConfig>
+</virtualHostTemplate>

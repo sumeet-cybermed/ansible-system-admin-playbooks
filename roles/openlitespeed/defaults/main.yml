@@ -1,0 +1,6 @@
+mem_soft_limit: 1024M
+mem_hard_limit: 1024M
+proc_soft_limit: 100
+proc_hard_limit: 150
+
+

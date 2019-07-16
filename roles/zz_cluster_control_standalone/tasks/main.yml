@@ -1,0 +1,7 @@
+---
+#
+#- include: main-ansible.yml
+#  when: clustercontrol_install_use_shell_script is not defined or not clustercontrol_install_use_shell_script
+
+- include: main-shellscript.yml
+  when: clustercontrol_install_use_shell_script is defined and clustercontrol_install_use_shell_script

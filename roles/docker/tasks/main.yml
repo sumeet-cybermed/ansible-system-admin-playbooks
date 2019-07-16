@@ -1,0 +1,131 @@
+---
+- name: Verify that the kernel is at least 3.10
+  shell: uname -r | grep "^3.10."
+  register: uname_result
+  tags:
+    - always
+
+- name: fail if not at least v3.10
+  fail: msg="kernel version is not adequate"
+  when: uname_result.stdout == ''
+  tags:
+    - always
+
+- name: Enable OverlayFS
+  template:
+    src: ../../upgrade_distrib/templates/overlay.conf
+    dest: /etc/modules-load.d/overlay.conf
+  tags:
+    - always
+
+- name: Verify that OverlayFS is enabled
+  shell: lsmod | grep overlay
+  register: overlay_result
+  tags:
+    - always
+  ignore_errors: true
+
+- name: fail if overlayfs not enabled
+  fail: msg="overlayfs not enabled. please reboot"
+  when: overlay_result.stdout == ''
+  tags:
+    - always
+
+- name: Configure yum to use the Docker yum repo
+  template:
+    src: docker.repo
+    dest: /etc/yum.repos.d/docker.repo
+  tags:
+    - always
+
+- name: ensure dir exists
+  file:
+    path: /etc/systemd/system/docker.service.d/
+    state: directory
+  tags:
+    - always
+
+- name: Configure systemd to run the Docker Daemon with OverlayFS
+  template:
+    src: docker.service.override.conf
+    dest: /etc/systemd/system/docker.service.d/override.conf
+  tags:
+    - always
+
+- name: UnInstall Obsolete conflicting redhat packages
+  shell: "yum -y remove docker docker-common container-selinux
+  tags:
+    - install_packages
+    
+- name: Install the Docker Repos
+  shell: "yum-config-manager --add-repo https://docs.docker.com/v1.13/engine/installation/linux/repo_files/centos/docker.repo"
+  tags:
+    - install_packages
+
+- name: update yum
+  shell: "yum makecache fast"
+  tags:
+    - install_packages
+    
+- name: Install the Docker engine, daemon, and service
+  shell: "yum install --assumeyes --tolerant docker-engine"
+  tags:
+    - install_packages
+
+- name: enable and start docker
+  service: name=docker enabled=yes state=restarted
+  tags:
+    - always
+
+- name: Test that Docker is properly installed
+  shell: docker ps
+  tags:
+    - always
+
+- name: Display Docker Info
+  shell: docker info
+  tags:
+    - always
+
+- name: install correct ansible docker packages
+  shell: "pip install  docker-py==1.9.0 docker-compose==1.8.0"
+  tags:
+    - always
+
+- name: Create shared data container - {{docker_data_only_container_name}}
+  tags:
+    - install_packages
+  docker_container:
+    name: "{{docker_data_only_container_name}}"
+    image: busybox
+    memory_reservation: 1024MB
+    keep_volumes: yes #retain volumes associated with a removed container.
+    restart_policy: "no" #do not restart - we use a service wrapper
+    recreate: no #do not recreate if present
+#    ignore_image: True #ignore image version - only from v2.2
+    state: present #create if not present
+    pull: no #only pull an image when missing.
+    tty: yes #Allocate a psuedo-TTY.
+    trust_image_content: yes #skip image verification.
+    hostname: "{{cluster_control_docker_container_name}}"
+    etc_hosts: {}
+    volumes:
+      - /{{docker_data_only_container_name}}_data
+  when: create_docker_data_only_container is defined and create_docker_data_only_container
+
+
+- name: Install {{docker_data_only_container_name}} systemd script
+  tags:
+    - always
+  template: src=docker_data_only_container_name.service dest=/etc/systemd/system/{{docker_data_only_container_service_name}}.service
+      
+- name: start {{docker_data_only_container_name}} - docker
+  tags:
+    - always
+  shell: docker start {{docker_data_only_container_name}}
+
+- name: start and enable {{docker_data_only_container_name}} - service
+  tags:
+    - always
+  service: name={{docker_data_only_container_service_name}} state=started  enabled=yes
+

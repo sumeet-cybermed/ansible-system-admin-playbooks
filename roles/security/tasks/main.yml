@@ -1,0 +1,29 @@
+  
+ - name: set user passwds
+   user: name={{item.name}} state=present password={{item.password}} update_password=always
+   with_items:
+#    - {name: "root", password: "{{ root_securepassword|password_hash('sha512') }}"  }
+    - {name: "{{dev_username}}", password: "{{ dev_userpassword|password_hash('sha512') }}"  }
+    - {name: "{{admin_username}}", password: "{{ admin_userpassword|password_hash('sha512') }}"  }
+    #- {name: "vagrant", password: "{{ vagrant_securepassword|password_hash('sha512') }}"  }
+   ignore_errors: false
+  
+ 
+ - name: Grant mysql root user access using secure password
+   mysql_user:
+    name: root
+    append_privs: yes
+    priv: "*.*:ALL"
+    host: "{{ item }}" 
+    password: "{{ mysql_root_secure_password }}"
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_secure_password }}"
+    login_port: "{{db.mysql_listen_port}}"
+   with_items:
+    - localhost
+    - 127.0.0.1
+    - "%"
+    # - ::1
+   sudo: yes
+   ignore_errors: yes #in case password was already changed

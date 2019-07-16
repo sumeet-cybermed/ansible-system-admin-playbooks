@@ -1,0 +1,13 @@
+---
+- name: Ensure postfix is installed (RedHat).
+  tags:  install_packages
+  yum: pkg=postfix state={{installed_package_state}}
+  when: ansible_os_family == 'RedHat'
+
+- name: Ensure postfix is installed (Debian).
+  tags:  install_packages
+  apt: pkg=postfix state={{installed_package_state}}
+  when: ansible_os_family == 'Debian'
+
+- name: Ensure postfix is started and enabled at boot.
+  service: name=postfix state=started enabled=yes

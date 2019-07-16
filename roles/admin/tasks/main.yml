@@ -1,0 +1,61 @@
+---
+- name: Create admin docroot
+  file: path={{ admin_doc_root }} state=directory owner={{ web_user }} group={{ web_group }}
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+
+
+- name: Set up out index
+  template: src=index.php dest={{ admin_doc_root }}/index.php owner={{ web_user }} group={{ web_group }}
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+
+
+#  prefix zz to vhost file so it is not used by nginx by default if another more matching file exits
+- name: Set up admin virtual host
+  template: src=etc/nginx/conf.d/admin.conf dest=/etc/nginx/conf.d/zz_admin-{{ default_backend }}.conf owner=root group=root mode=0644
+  notify: nginx reload
+
+- name: copy _phpinfo.php
+  template:
+    src: _phpinfo.php
+    dest: "{{ admin_doc_root }}/_phpinfo.php"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+    
+- name: copy _hhvminfo.hhvm
+  template:
+    src: _hhvminfo.php
+    dest: "{{ admin_doc_root }}/_hhvminfo.php"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+
+
+#############################    
+- name: setup mailhog
+  include: mailhog.yml
+  when: install_mailhog
+
+- name: setup phpmemcachedadmin
+  include: phpmemcachedadmin.yml
+  when: install_phpmemcachedadmin
+
+- name: setup phpmyadmin
+  include: phpmyadmin.yml
+  when: install_phpmyadmin
+
+- name: Create custom user config dir
+  file: path={{ admin_doc_root }}/logs/config.user.d state=directory owner={{ web_user }} group={{ web_group }}
+  when: install_pml and (not is_clustered_storage_var_www or cluster_master is defined)
+
+- name: setup pml
+  include: pml.yml
+  when: install_pml
+
+- name: setup redisadmin 
+  include: redisadmin.yml
+  when: install_redisadmin
+
+- name: setup ajenti 
+  include: ajenti.yml
+  when: install_ajenti
+  
+ ############################# 
+- name: restart nginx
+  service: name=nginx state=restarted  

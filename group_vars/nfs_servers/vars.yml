@@ -1,0 +1,16 @@
+---
+backup_schedules:
+  mysql:
+      - "# when = everyday at 01"
+      - "# when = everyday at 07"
+      - "# when = everyday at 13"
+      - "# when = everyday at 21"
+  rdiff:
+      - "# when = everyday at 01 #no need to backup local files - remote.rdiff is enough"
+  remote_rdiff:
+      - "# when = everyday at 01"
+      - "# when = everyday at 07"
+      - "# when = everyday at 13"
+      - "# when = everyday at 21"
+  xtrabackup:
+     - "# when = everyday at 01 #bugcms: xtrabackup is sloow - need to look at it"

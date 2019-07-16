@@ -1,0 +1,50 @@
+- name: set up cluster configuration
+  hosts: all
+  ### remote_user: vagrant
+  serial: "{{serial_var}}"
+  #allow 2 out of 3 to fail while downloading packages to shared host directory
+  max_fail_percentage: 1
+  sudo: yes  
+   
+  vars_files:
+    - "{{pb_app_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_config_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_site_vars_file}}" #parsed from extra args in config.yml
+  
+  vars:
+     - is_initial_run: false
+
+  roles:
+    - {
+        role: handlers,
+        when: true
+      }
+    - {
+        role: debugging,
+        when: true
+      }
+    - docker
+    - cluster_db #install before php to avoid package conflicts
+    - cluster_redis
+    - {
+        role: cluster_storage,
+        when: is_cluster and is_part_of_cluster
+      }
+    - nginx
+    - php-fpm
+    - php7-fpm
+    - hhvm
+    - {
+            role: cluster_haproxy,
+            when: is_cluster and is_part_of_cluster
+      }
+    - {
+            role: cluster_maxscale,
+            when: is_cluster and is_part_of_cluster and cluster_db_loadbalancer == 'maxscale'
+      }
+    - {
+        role: zabbix-agent,
+        when: True
+      }
+
+

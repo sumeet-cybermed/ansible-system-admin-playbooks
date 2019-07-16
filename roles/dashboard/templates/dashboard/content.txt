@@ -1,0 +1,211 @@
+# Admin/Developer Notes - {{ansible_hostname}} #
+
+## IP Addresses ##
+* External Ip Address:
+  - [{{external_ip_address}}](http://{{external_ip_address}})
+ 
+* All IP Addresses:
+{% for ipaddr in ansible_all_ipv4_addresses %}  
+  - [{{ipaddr}}](http://{{ipaddr}})
+{% endfor%}
+
+## Vagrant ###
+This server has been provisioned using vagrant and ansible scripts.
+
+### Command line (CLI) access ###
+To connect to the Vagrant instance, type `vagrant ssh` from inside of the {{ansible_hostname}} directory. This will place you in the CLI on the VM. For example:
+
+```bash
+hostname:{{ansible_hostname}} username$ vagrant ssh
+Welcome to Ubuntu 14.04 LTS (GNU/Linux 3.13.0-29-generic x86_64)
+```
+
+### Directory Layout ###
+The top level of the directory would contain files and directories like so:
+
+* _/vagrant_: points to the root vagrant folder from which the vagrant up command was run
+
+* _/vagrant/Vagrantfile_: Vagrant provisioning file.
+
+* _/vagrant/provisioning/ansible/bin/_: contains shell scripts that can be used for automated provisdioning and setup of system components and applcations. These scripts can be run multiple times to restore this machine to the original state
+
+* _/vagrant/provisioning/sites-data/_: 
+   + admin-hosts.yml: admin sites provisioned
+   + wordpress/: starter wordpress sites provisioned
+   + webapps/: custom web apps provisioned
+
+### Mapped Directories ###
++ {% if ansible_pkg_mgr=='apt' %}/var/cache/apt/archives/ mapped to: _/vagrant_home/_cache/apt/archives_{% else %}_/var/cache/yum/_ mapped to: _vagrant_home/var/cache/yum/_{% endif %}
+
++ _/var/downloads/_: mapped to _vagrant_home/downloads_
+   
+## Software Stack Installed ##
+Once Vagrant is done provisioning the VM, you will have a box running {{ansible_distribution}} {{ansible_distribution_version}} containing:
+
+{% for component in components_installed %}{% if component !="" %}
+* {{component}}
+{% endif %}{% endfor %}
+
+## Developer tools Installed ##
+The following developer tools are installed by default:
+
+{% for component in dev_tools_installed %}{% if component !="" %}
+* {{component}}
+{% endif %}{% endfor %}
+
+### Xdebug ###
+PHP's [Xdebug extension](http://xdebug.org) is enabled by default for the site based on PHP-FPM. Additionally, the WordPress installs have the following constants defined:
+
+```php
+define('WP_DEBUG', true);
+define('WP_DEBUG_DISPLAY', false);
+define('SCRIPT_DEBUG', true);
+define('SAVEQUERIES', true);
+```
+
+Enabling the Query Monitor WordPress plugin will allow logged-in users to view the useful debug information output by Xdebug, such as number of queries, number of objects, page render time, etc.
+
+### XHProf ###
+{{ansible_hostname}} includes an advanced PHP/HHVM profiling tool, [http://php.net/xhprof](http://php.net/xhprof) and a GUI for viewing results. You can view results for your {{ansible_hostname}} instance at [xhprof.{{ansible_hostname}}](http://xhprof.{{ansible_hostname}}).  
+
+Initially, there will be no profiling data -- you'll need to enable profiling for the various {{ansible_hostname}} sites. You can enable profiling by passing `_profile=1` to any PHP request on the host. To get started, visit:
+
+* [http://php.{{main_webapp_name}}.{{ansible_hostname}}/?_profile=1](http://php.{{ansible_hostname}}/?_profile=1)
+* [http://hhvm.{{main_webapp_name}}.{{ansible_hostname}}/?_profile=1](http://hhvm.{{ansible_hostname}}/?_profile=1)
+
+Passing the `_profile=1` argument to the sites causes XHProf to set a cookie. While this cookie is active, XHProf will attempt to profile all of your page views. Visit a few URLs on your PHP and HHVM sites, then visit [xhprof.{{ansible_hostname}}](http://xhprof.{{ansible_hostname}}) again. You should see profiling results displayed for your interactions with the sites.
+
+When you want to disable profiling, simply append `_profile=0` to any request, or visit these links:
+
+* [http://php.{{main_webapp_name}}.{{ansible_hostname}}/?_profile=0](http://php.{{main_webapp_name}}.{{ansible_hostname}}/?_profile=0)
+* [http://hhvm.{{main_webapp_name}}.{{ansible_hostname}}/?_profile=0](http://hhvm.{{main_webapp_name}}.{{ansible_hostname}}/?_profile=0)
+
+Visiting those links should delete the cookie and disable XHProf.
+
+## Admin Tools Installed ##
+{{ansible_hostname}} contains several useful tools for gathering system state and for administering individual aspects of the system.
+
+### Database ###
+phpMyAdmin is available at [admin.{{ansible_hostname}}/phpmyadmin/](http://admin.{{ansible_hostname}}/phpmyadmin/). The username is `root` and the  password is blank.
+
+### Object Cache/Memcached ###
+PHP Memcached Admin is available at [admin.{{ansible_hostname}}/phpmemcachedadmin/](http://admin.{{ansible_hostname}}/phpmemcachedadmin/).
+
+### Object Cache/Redis ###
+PHP Redis Admin is available at [admin.{{ansible_hostname}}/redisadmin/](http://admin.{{ansible_hostname}}/redisadmin/). 
+
+### Viewing log files ###
+Once you are connected to the {{ansible_hostname}} virtual machine, system and web server logs can be viewed in `/var/log`. You may view the contents of the system log by typing `sudo less /var/log/syslog`.
+
+Web server logs are stored in `/var/log/nginx`, with separate log files for every site. Each site has several log files associated with it:
+
+* `[site].{{ansible_hostname}}.access.log`
+* `[site].{{ansible_hostname}}.access.log`
+* `[site].{{ansible_hostname}}.error.log`
+
+The first two logs track web requests to the sites, while the third log tracks errors reported, both by Nginx and by "upstream" PHP and HHVM processes.
+
+HHVM logs are in `/var/log/hhvm`. PHP-FPM writes all of its logging information into `/var/log/php5-fpm.log`.
+
+Sometimes, keeping tabs on a log file while hitting a site to view log messages in real-time can be helpful. To do so, run `sudo tail -f [log file]` from your SSH session. For example, `sudo tail -f /var/log/nginx/php.{{ansible_hostname}}.error.log` would give you an always-updating view of the error log file for the PHP-FPM-based site.
+
+You can view log files online using PimpMyLog at:
+[Log Viewer Page - http://admin.{{ansible_hostname}}/logs](http://admin.{{ansible_hostname}}/logs)
+
+### SMTP Server ###
+MailHog has been installled as local access only SMTP Server. It can be configured to forward emails to external servers if required.
+
+[Mail Hog Admin Page - http://mail.{{ansible_hostname}}](http://mail.{{ansible_hostname}})
+
+### Database access ###
+You may easily use the phpMyAdmin installation at [admin.{{ansible_hostname}}/phpmyadmin/](http://admin.{{ansible_hostname}}/phpmyadmin/) (as listed above) in order to view and interact with the underlying database. 
+
+However, if you are used to using a third-party GUI, such as
+[Sequel Pro](http://www.sequelpro.com/) or [MySQL Workbench](http://www.mysql.com/products/workbench/), you would then configure MySQL WB or Sequel Pro to connect to `{{ansible_hostname}}:{{db.mysql_listen_port}}`.
+
+## PHP-FPM backends Installed ##
+A number of php backends have been installed:
+
+For the _{{main_webapp_name}}_ site, the urls are:
+{% for backend in backends_installed %}
+### {{backend}} ###
++ _site_: {{backend}}.{{main_webapp_name}}.{{ansible_hostname}}
++ _phpinfo page_: (http://{{backend}}.{{main_webapp_name}}.{{ansible_hostname}}/_phpinfo.php
+{% endfor %}
+
+And similarly for other sites installed.
+
+## Sites/Applications Provisioned##
+
+### Admin Sites Provisioned ###
+{% for site in default_websites_installed|sort(attribute='sortas') %}{% if site.path != "" %}
+* [{{site.path }}](http://{{ site.path }}) -- {{site.description}}
+{% endif %}{% endfor %}
+
+### Applications Provisioned ###
+{% for site in user_websites_installed|sort(attribute='sortas') %}{% if site.path != "" %}
+* [{{site.path }}](http://{{ site.path }}) -- {{site.description}}
+{% endif %}{% endfor %}
+
+### Hosts File ###
+If you did *not* install the `vagrant-hostsupdater` plugin, you will need to manually [add](http://www.howtogeek.com/howto/27350/beginner-geek-how-to-edit-your-hosts-file/) the following host entries to your host operating system's host files:
+
+```
+{% for site in default_websites_installed|sort(attribute='sortas') %}{% if site.path != "" %}
+{{external_ip_address}} {{ site.path }}
+{% endif %}{% endfor %}
+
+{% for site in user_websites_installed|sort(attribute='sortas') %}{% if site.path != "" %}
+{{external_ip_address}} {{ site.path }}
+{% endif %}{% endfor %}
+```
+
+### Database Access ###
+All sites have a specified admin user with a secure password - to see the password visit the config file for each site.
+
+### Accessing the sites on-disk (docroot) ###
+When logged into the Vagrant ssh terminal, they are located in sub folders below {{www_root}}.
+
+## How to Provision More Sites ##
+* The Provision File
+Let Ansible provision your new site *newsite* for you.
+    1. Copy provisioning/sites-data/sitename/sitename-sites-install.yml to provisioning/sites-data/newsite/newsite-sites-install.yml.
+    2. Change the `webapp` variable to newsite. If the directory does not exist when provisioning is executed, it will be created and the latest stable version or WordPress installed.
+    3. Edit the domain lists to be the domain(s) you want setup for the newsite residing in the Vagrant. Domains listed under `webapp_hhvm_domains` will be served by HHVM.  Those listed under `webapp_php_domains` will be served by the PHP-FPM service. Those listed under `webapp_php7_domains` will be served by the PHP7-FPM service (if installed).
+
+* Hosts file
+If you did not install the vagrant-hostsupdater plugin, you will need to manually add the domains to your host operating system’s host files. See the example [above](/#mercury-vagrant-{{ansible_hostname}}-what-you-get-sites).
+
+* Provision the site
+  - After editing or adding a new configuration, for the changes to take effect, you must run */vagrant/provisioning/ansible/bin/webapp.sh newsite* 
+
+  - *Omitting the argument newsite set all webapps to their default intial state so use with caution*
+
+### Example ###
+_/vagrant/provisioning/sites-data/newsite/newsite-sites-install.yml_
+
+```
+sites: 
+  webapp_addcachedomain: 1
+  webapp: newsite
+  ## copy_source_from_host: True
+  webapp_symlink_source_on_host: False
+  #
+  webapp_db_name: "dasboard_url_1"
+  webapp_db_user_name: newsite
+  webapp_db_user_password: "xyz"    
+  webapp_db_dump_file: newsite_dump.sql
+  webapp_db_super_access: False
+  webapp_writable_dirs:
+    # - cache  
+  webapp_cron_jobs:
+    # - {name: "Run CyberMedCRM Scheduled Jobs every 5 minutes", minute: "*/5", job: "some command"}
+  #
+  webapp_hhvm_domains:
+    - hhvm.newsite.{{ansible_hostname}}
+  webapp_php_domains:
+    - php.newsite.{{ansible_hostname}}
+  webapp_php7_domains:
+    - php7.newsite.{{ansible_hostname}}
+```
+

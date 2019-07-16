@@ -1,0 +1,10 @@
+---
+mailhog_file_name: MailHog_linux_amd64
+mailhog_binary_url: "https://github.com/mailhog/MailHog/releases/download/v0.1.5/{{ mailhog_file_name }}"
+mailhog_install_dir: /opt/mailhog
+
+ssmtp_mailhub: localhost:1025
+ssmtp_root: postmaster
+ssmtp_authuser: ""
+ssmtp_authpass: ""
+ssmtp_from_line_override: "YES"

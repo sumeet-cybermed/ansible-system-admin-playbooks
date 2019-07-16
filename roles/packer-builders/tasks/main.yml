@@ -1,0 +1,6 @@
+
+- name: include packer-xenserver
+  include: ./xenserver.yml
+  when: packer_xenserver is defined and packer_xenserver
+  tags: ['always']
+

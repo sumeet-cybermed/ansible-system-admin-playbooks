@@ -1,0 +1,698 @@
+---
+upgrade_distrib_to_latest: false
+
+installed_package_state: present
+
+host_initial_default_root_password: "{{vaulted_host_initial_default_root_password}}"
+#############
+#development_host_and_user
+#############
+#
+
+# is passed as an extra var to create secure unlisted passwords per site
+site_salt: ""
+
+admin_email: admin@localhost.com
+
+selinux_state: disabled
+firewall_state: disabled
+
+double_quote: '"'
+single_quote: "'"
+back_slash: "\\"
+forward_slash: "/"
+####################
+install_ajenti: false
+install_redisadmin: false
+install_pml: false
+install_phpmyadmin: false
+install_phpmemcachedadmin: false
+install_mailhog: false
+##
+install_xhprof: false
+#
+install_munin: false
+install_graphite: false
+#
+install_prometheus: true
+install_grafana: true
+install_zabbix: true
+
+##
+docker_data_only_container_name: shared_data_container
+docker_data_only_container_service_name: docker_shared_data_container
+##
+install_cluster_control: true
+cluster_control_docker_container_name: cluster_control
+cluster_control_docker_container_service_name: docker_cluster_control
+cluster_control_docker_image_name: "severalnines/clustercontrol:latest"
+cluster_control_docker_container_published_http_port: 51080
+cluster_control_docker_container_published_https_port: 51443
+cluster_control_docker_container_published_mysql_port: 51306
+
+####################
+install_mongo_db: true
+mongo_db_docker_image_name: "mongo:3.0"
+mongo_db_docker_container_name: mongo_db
+mongo_db_docker_container_published_mongo_db_port: 27017
+
+####
+##
+install_rocket_chat: "{% if is_nfs_server  %}True{% else %}False{% endif %}"
+rocket_chat_docker_container_name: rocket_chat
+rocket_chat_docker_container_service_name: docker_rocket_chat
+rocket_chat_docker_image_name: "rocket.chat:latest"
+rocket_chat_docker_container_published_http_port: 52080
+
+
+
+
+dev_host_smb_user: "{{ vaulted_dev_host_smb_user }}"
+dev_host_smb_user_password: "{{ vaulted_dev_host_smb_user_password }}"
+
+# local vms
+
+# rsdh vpn
+# dev_host_ip: 172.16.72.73
+
+ansible_root_dir: /vagrant/provisioning/ansible
+
+
+processor_cores: "{% if ansible_processor_cores == '' %}4{% else %}{{ansible_processor_cores}}{% endif %}"
+
+
+dev_host_ip: 192.168.150.1 
+webapp_host_folder: "{{dev_host_ip}}/{{webapp}}"
+dev_guest_mapped_folder: "/developer/{{dev_host_ip}}"
+webapp_local_mapped_folder: "{{dev_guest_mapped_folder}}/{{webapp}}"
+
+
+db_type: mysql 
+# db_license: community
+db_license: commercial 
+db_type_desc: MySQL Variant 
+# db_variant: "{% if ansible_pkg_mgr=='apt' %}mariadb{% else %}mysql{% endif %}"
+db_variant: mariadb
+db_variant_desc: mariadb
+#mysql
+# db_version: "{% if ansible_pkg_mgr=='apt' %}10.0{% else %}5.7{% endif %}"
+db_version: 10.1
+#
+#webserver_type: apache
+webserver_type: nginx
+
+##
+dasboard_path: "/dashboard"
+
+##
+# yum_hhvm_repo: ulyaoth
+#yum_hhvm_repo: epel
+yum_hhvm_repo: ulyaoth
+
+##
+web_user: nginx
+web_userid: 34311
+
+web_group: nginx
+web_groupid: 34312
+#
+#
+dev_username: devuser
+dev_userid: 34413
+
+dev_groupname: developers
+dev_groupid: 34414
+dev_usercomment: Main Development User
+dev_userpassword: "{{vaulted_dev_userpassword}}"
+dev_userhomepath: /home/{{dev_username}}
+#
+
+#
+admin_username: admin
+admin_userid: 34515
+admin_groupid: 34516
+admin_groupname: admins
+admin_usercomment: Main Admin User
+admin_userpassword: "{{vaulted_admin_userpassword}}"
+admin_userhomepath: /home/{{admin_username}}
+
+#
+http_auth_username: http_auth
+http_auth_userpassword: "{{vaulted_http_auth_userpassword}}"
+
+#
+
+backup_username: backupuser
+backup_userid: 34617
+backup_groupid: 34618
+backup_userpassword: "{{vaulted_backup_userpassword}}"
+backup_usercomment: "User used for Accessing Backups via NFS Shares"
+backup_groupname: backupuser
+backup_userhomepath: /home/{{backup_username}}
+
+vagrant_doc_root: /vagrant/_shared_files/sites
+www_root: /var/www
+scripts_root: /var/scripts
+admin_doc_root: "{{www_root}}/admin"
+dashboard_doc_root: "{{www_root}}/dashboard"
+xhprof_root: /opt/xhprof
+
+hhvm_port: 9000
+hhvm_admin_server_port: 9101
+nginx_listen_port: 80
+nginx_secure_listen_port: 443
+varnish_listen_port: 6081
+nginx_listen_port_http_to_fcgi: 8083
+nginx_fcgi_cache_location: /var/cache/nginx/fastcgi
+nginx_proxy_cache_location: /var/cache/nginx/proxy
+nginx_fcgi_cache_durtn: "120s"
+nginx_proxy_cache_durtn: "120s"
+#should be more than to ensure a user who updates data sees results in all records
+nginx_fcgi_cache_bypass_after_post: "180s"
+nginx_pagespeed: false
+
+varnish_version: 3.0
+phpmyadmin_version: 4.3.6-english
+wpcli_version: WP-CLI 0.18
+install_wordpress_plugins: false
+
+default_backend: php
+
+
+##############
+# root
+##############
+root_securepassword: "{{ vaulted_root_securepassword }}"
+#
+vagrant_securepassword: "{{ vaulted_vagrant_securepassword }}"
+
+#
+webapps_default_db_user_password: "{{vaulted_webapps_db_user_password}}"
+
+#default backup schedule - needs to be manually modified by admin on dest host if needed
+#
+backup_dir_root: /var/backups
+backup_dir_mysql: /var/backups/mysql
+backup_dir_rdiff: /var/backups/rdiff
+backup_dir_xtrabackup: "{{backup_dir_mysql}}/xtrabackup"
+#
+restore_dir_root: /var/restore
+restore_dir_mysql: /var/restore/mysql
+restore_dir_rdiff: /var/restore/rdiff
+restore_dir_xtrarestore: "{{restore_dir_mysql}}/xtrarestore"
+#
+
+backup_schedules:
+  mysql:
+      - "# when = everyday at 01"
+      - "# when = everyday at 07"
+      - "# when = everyday at 13"
+      - "# when = everyday at 21"
+  rdiff:
+      - "# when = everyday at 01 #no need to backup local files - remote.rdiff is enough"
+  remote_rdiff:
+      - "# when = everyday at 01"
+      - "# when = everyday at 07"
+      - "# when = everyday at 13"
+      - "# when = everyday at 21"
+  xtrabackup:
+     - "# when = everyday at 01 #bugcms: xtrabackup is sloow - need to look at it"
+
+backup_final_remote_host: ""
+backup_final_remote_host_dir_rdiff: /var/backups/uploaded/{{lb.external_bind_address}}/rdiff
+
+
+#
+samba_share_root: /www
+samba_group_name: samba_group
+samba_users:
+  - { name: '{{ dev_username }}', smbpasswd: '{{ dev_userpassword }}' }
+
+#############
+#samba
+#############
+workgroup: WORKGROUP
+
+public_share_name: public
+public_share_path: /public/shared_folder
+
+private_share_name1: www_sites
+private_share_path1: "{{www_root}}"
+
+private_share_name2: etc
+private_share_path2: /etc 
+
+private_share_name3: var
+private_share_path3: /var 
+
+root_share_name: root
+root_share_path: /
+  
+#############
+#security
+################
+
+mysql_conf_file_path: "{% if db_variant =='mysql' %}{% if ansible_pkg_mgr=='apt' %}/etc/my2.cnf{% else %}/etc/my.cnf{% endif %}{% else %}/etc/my2.cnf{% endif %}"
+
+
+mysql_service: "{% if db_variant =='mysql' %}{% if ansible_pkg_mgr=='apt' %}mysql{% else %}mysqld{% endif %}{% else %}mariadb{% endif %}"
+mysql_firewall_service: "{% if ansible_pkg_mgr=='apt' %}mysql{% else %}mysql{% endif %}"
+mysql_root_user: root
+
+#
+mysql_root_username: root
+mysql_root_default_password: "{{ vaulted_mysql_root_default_password }}"
+mysql_root_secure_password: "{{ vaulted_mysql_root_secure_password }}"
+mysql_repl_secure_password: "{{ vaulted_mysql_repl_secure_password }}"
+mysql_lb_secure_password: "{{ vaulted_mysql_lb_secure_password }}"
+
+#
+webapp_db_user_password: "{{vaulted_webapps_db_user_password}}"
+#
+yum_hhvm_version: -3.6.0
+
+#
+php5_conf_path: "{% if ansible_pkg_mgr=='apt' %}/etc/php5/mods-available{% else %}/etc/php.d{% endif %}"
+
+php5_fpm_conf_path: "{% if ansible_pkg_mgr=='apt' %}/etc/php5/fpm/conf.d{% else %}/etc/php.d{% endif %}"
+php5_fpm_pool_path: "{% if ansible_pkg_mgr=='apt' %}/etc/php5/fpm/pool.d{% else %}/etc/php-fpm.d{% endif %}"
+
+cluster_db_loadbalancer: "maxscale" # "maxscale" #haproxy
+
+mysqlnd_ms_is_available_for_all_runtimes: False # not available for php7 or hhvm or need to find another way to do read/write split
+
+install_mysqlnd_ms: "{% if is_cluster and is_part_of_cluster and cluster_db_loadbalancer == 'haproxy' and mysqlnd_ms_is_available_for_all_runtimes %}True{% else %}False{% endif %}"
+mysqlnd_ms_json_path: "/etc"
+mysqlnd_ms_json_filename: "mysqlnd_ms.json"
+
+php5_custom_modules_path: "{% if ansible_pkg_mgr=='apt' %}/usr/lib/php{{php5_major_version}}{% else %}/usr/lib64/php/modules{% endif %}"
+php5_fix_modules_path: "{% if ansible_pkg_mgr=='apt' %}{% else %}/usr/lib64/php/modules{% endif %}"
+
+php5_major_version: 56
+php7_major_version: 70
+
+# go
+go_filename: go1.5.linux-amd64.tar.gz
+go_url: https://storage.googleapis.com/golang/go1.5.linux-amd64.tar.gz
+go_home_up: /usr/local
+go_home: /usr/local/go
+go_bin: /usr/local/go/bin/go
+go_path: /var/downloads/go/gopath
+go_set_env: "GOROOT={{go_home}}\nGOPATH={{go_path}}"
+go_export_env: "export GOROOT={{go_home}};export PATH=$PATH:{{go_home}}/bin;export GOPATH={{go_path}}"
+
+# packer
+packer_filename: packer_0.8.6_linux_amd64.zip
+packer_url: https://dl.bintray.com/mitchellh/packer/packer_0.8.6_linux_amd64.zip
+packer_home: /usr/local/packer
+packer_bin: /usr/local/packer/packer
+packer_export_env: "export PATH=$PATH:{{packer_home}};"
+packer_build_xenserver: not xenserver_check_built.stat.exists or (rebuild_xenserver is defined and rebuild_xenserver)
+
+# vagrant
+vagrant_filename: vagrant_1.7.4_x86_64
+vagrant_url: "{% if ansible_pkg_mgr=='apt' %}https://dl.bintray.com/mitchellh/vagrant/{{vagrant_filename}}.deb{% else %}https://dl.bintray.com/mitchellh/vagrant/.rpm{% endif %}"
+vagrant_lxc_templates_home: "/vagrant/_builders/vagrant/lxc/fgrehm/vagrant-lxc-base-boxes/"
+vagrant_set_env: "VAGRANT_DOTFILE_PATH=~/.vagrant.local"
+vagrant_export_env: "{{vagrant_set_env}}"
+
+vagrant_build_lxc_boxes: 
+  - "trusty"
+
+#packer - xenserver builder
+xenserver_host: 192.168.150.50
+xenserver_port: 80
+xenserver_user: root
+xenserver_password: vagrant
+
+packer_xs_templates_home: "/vagrant/_builders/packer/xenserver/packer-templates/"
+
+packer_build_xs_boxes: 
+  - "debian-7.7-amd64.json"
+  
+# virtualbox
+virtualbox_extn_filename: Oracle_VM_VirtualBox_Extension_Pack-5.0.2-102096.vbox-extpack
+virtualbox_extn_url: "http://download.virtualbox.org/virtualbox/5.0.2/{{virtualbox_extn_filename}}"  
+
+virtualbox:
+  guest_additions:
+    version: 5.0.0
+    iso_url: http://download.virtualbox.org/virtualbox/5.0.0_RC3/VBoxGuestAdditions_5.0.0_RC3.iso
+    iso_file: VBoxGuestAdditions_5.0.0_RC3.iso
+    iso_checksum: f0b8fec99c65231641d5d01558abb53fe8b81f131dc71519cb7994c9e297300d
+    iso_dir: /var/downloads/virtualbox
+    iso_mountdir: /mnt
+
+##
+flockport_lxc_filename: flockport-install.tar.xz
+flockport_lxc_url: "https://www.flockport.com/download2/flockport-install.tar.xz"
+flockport_lxc_check_installed:
+    rc: 1
+    
+##
+USE_LXC_BRIDGE: "false"
+LXC_BRIDGE: "lxcbr0"
+LXC_ADDR: "10.0.3.1"
+LXC_NETMASK: "255.255.255.0"
+LXC_NETWORK: "10.0.3.0/24"
+LXC_DHCP_RANGE: "10.0.3.2,10.0.3.254"
+LXC_DHCP_MAX: "253"
+LXC_DOMAIN: "lxc"
+
+##
+phpstorm_filename: PhpStorm-9.0.2.tar.gz
+phpstorm_url: http://download.jetbrains.com/webide/PhpStorm-9.0.2.tar.gz  
+phpstorm_extracted_dir: PhpStorm-141.2462
+phpstorm_home_up: /usr/local
+phpstorm_home: "{{phpstorm_home_up}}/{{phpstorm_extracted_dir}}"
+phpstorm_bin: "{{phpstorm_home}}/bin/phpstorm.sh"
+phpstorm_export_env: "export PATH=$PATH:{{phpstorm_home}}/bin"
+
+
+#
+yum_epel_repo_url: "http://download.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
+yum_epel_repo_gpg_key_url: "/etc/pki/rpm-gpg/RPM-GPG-KEY-EPEL-{{ ansible_distribution_major_version }}"
+
+yum_remi_repo_url: "http://rpms.famillecollet.com/enterprise/remi-release-{{ ansible_distribution_major_version }}.rpm"
+yum_remi_repo_gpg_key_url: "http://rpms.remirepo.net/RPM-GPG-KEY-remi"
+    
+yum_rpmforge_repo_url: "http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el{{ ansible_distribution_major_version }}.rf.x86_64.rpm"
+yum_rpmforge_repo_gpg_key_url: "http://apt.sw.be/RPM-GPG-KEY.dag.txt"
+
+yum_nginx_repo_url: "http://nginx.org/packages/centos/{{ ansible_distribution_major_version }}/noarch/RPMS/nginx-release-centos-{{ ansible_distribution_major_version }}-0.el{{ ansible_distribution_major_version }}.ngx.noarch.rpm"
+yum_nginx_repo_gpg_key_url: "http://nginx.org/keys/nginx_signing.key"
+
+yum_mysql_repo_url: "http://dev.mysql.com/get/mysql-community-release-el{{ ansible_distribution_major_version }}-5.noarch.rpm"
+yum_mysql_repo_gpg_key_url: "https://raw.githubusercontent.com/example42/puppet-yum/master/files/rpm-gpg/RPM-GPG-KEY-mysql"
+
+mariadb_repo_subpath_distrib: "{% if ansible_distribution == 'CentOS'%}centos{% elif ansible_distribution == 'RedHat'%}rhel{% elif ansible_distribution == 'Debian'%}debian{% endif %}"
+mariadb_repo_subpath_os_version: "{{ansible_distribution_major_version}}"
+mariadb_repo_subpath: "{{mariadb_repo_subpath_distrib}}{{mariadb_repo_subpath_os_version}}"
+yum_mariadb_repo_url: ""
+yum_mariadb_repo_gpg_key_url: "https://yum.mariadb.org/RPM-GPG-KEY-MariaDB"  
+
+#######
+# For more information about default variables see:
+# http://www.ansibleworks.com/docs/playbooks_variables.html#id26
+#
+# vsftpd_users:
+#   - username: ftpuser
+#     name: FTP User
+#     # openssl passwd -salt 'somesalt' -1 'secret'
+#     password: '$1$somesalt$jezmI5TSY7mVTzHLgsK5L.'
+# vsftpd_config:
+#   local_umask: 022
+#
+
+# users to create with nologin
+vsftpd_users: []
+vsftpd_group: ftp
+# start on boot
+vsftpd_service_enabled: yes
+# current state: started, stopped
+vsftpd_service_state: started
+# default ssl
+vsftpd_key_file: ssl-cert-snakeoil.key
+vsftpd_cert_file: ssl-cert-snakeoil.pem
+# config variables
+vsftpd_config: {}
+# config template to install, relative to the ansible repository root
+vsftpd_config_template:
+
+#############
+##dummy/default values for LB for use in app nginx domains
+
+##
+is_cluster: false
+#
+is_part_of_cluster: "{% if 'cluster' in group_names %}True{% else %}False{% endif %}"
+is_server_monitor: "{% if 'server_monitors' in group_names %}True{% else %}False{% endif %}"
+is_cluster_controller: "{% if 'cluster_controllers' in group_names %}True{% else %}False{% endif %}"
+is_nfs_server: "{% if 'nfs_servers' in group_names %}True{% else %}False{% endif %}"
+#
+is_clustered_storage_var_www: "{% if False and is_part_of_cluster %}True{% else %}False{% endif %}"
+is_clustered_storage_var_backups: "{% if False and is_part_of_cluster %}True{% else %}False{% endif %}"
+is_clustered_db: "{% if is_cluster and is_part_of_cluster%}True{% else %}False{% endif %}"
+
+
+##
+
+#dirs we wish to share on this host
+nfs_shares:
+
+cluster_ip_addrs: "{% for node in groups['cluster'] %}{{ hostvars[node]['ansible_host']}}{% if not loop.last %},{% endif %}{% endfor %}"
+cluster_master_ip_addr: "{% if is_cluster and is_part_of_cluster and hostvars['cluster_master'] is defined %} {{hostvars['cluster_master'].ansible_host}} {% else %}127.0.0.1{% endif %} "
+
+allow_db_connect_from:
+  - 127.0.0.1
+  - localhost
+  - ::1
+  - "{{ lb.internal_bind_address }}"
+  - "{{ lb.internal_subnet|replace ('.0/24', '.%') }}" #todocms: replace last 0/24 with %
+  - "{{ lb.external_subnet|replace ('.0/24', '.%') }}" #todocms: replace last 0/24 with %
+  - "%" #needed as otherwise there are too many access denied from reverse dns host name errors
+
+cluster_ip_addrs_list: "{{cluster_ip_addrs.split(',')}}"
+
+########################
+#nfs servers valaible to this host
+nfs_shares_available:
+  webapps_root: "{{lb.nfs_server_1_external_addr}}:/var/nfs_shares/webapps"
+  backup_dir_rdiff: "{{lb.nfs_server_1_external_addr}}:{{backup_dir_rdiff}}"
+
+########################
+###loadbalancer and ip related
+lb:
+  ##external eth bound
+  external_loadbalanced_ip: "{{ansible_eth0.ipv4.address}}"
+  internal_loadbalanced_ip: "{{ansible_eth0.ipv4.address}}"
+
+  #
+  nfs_server_1_external_addr: "{{ansible_eth0.ipv4.address}}"
+  server_monitor_1_external_addr: "{{ansible_eth0.ipv4.address}}"
+  cluster_controller_1_external_addr: "{{ansible_eth0.ipv4.address}}"
+  #
+  nfs_server_1_internal_addr: "{{ansible_eth0.ipv4.address}}"
+  cluster_controller_1_internal_addr: "{{ansible_eth0.ipv4.address}}"
+  server_monitor_1_internal_addr: "{{ansible_eth0.ipv4.address}}"
+  #
+  external_eth_id: "eth0"
+  external_eth_name: "ansible_eth0"
+  external_bind_address: "{{ansible_eth0.ipv4.address}}"
+  #
+  external_network: "{{ansible_eth0.ipv4.network}}"
+  external_subnet: "{{[ansible_eth0.ipv4.network, ansible_eth0.ipv4.netmask]|join('/')| ipaddr('net')}}"
+  ###
+  ##internal eth bound
+  internal_eth_id: "eth0"
+  internal_eth_name: "ansible_eth0"
+  internal_bind_address: "{{ansible_eth0.ipv4.address}}"
+  #
+  internal_network: "{{ansible_eth0.ipv4.network}}"
+  internal_subnet: "{{[ansible_eth0.ipv4.network, ansible_eth0.ipv4.netmask]|join('/')| ipaddr('net')}}"
+
+  #
+
+  ###
+  auth: "{{haproxy_securepassword}}"
+
+
+##
+
+########################
+###db related
+db:
+  root_pass: "{{mysql_root_secure_password}}"
+  repl_username: "repl_user"
+  repl_pass: "{{mysql_repl_secure_password}}"
+  lb_username: "lb_user"
+  lb_pass: "{{mysql_lb_secure_password}}"
+  lb_rw_split_listen_port: "{% if is_cluster and is_part_of_cluster %}4406{% else %}3306{% endif %}"
+  lb_read_all_nodes_listen_port: "{% if is_cluster and is_part_of_cluster %}4407{% else %}3307{% endif %}"
+  allow_remote_connect_from: "{{cluster_ip_addrs_list + allow_db_connect_from}}"
+  mysql_extra_args:
+  mysql_listen_port: 3306
+  mysql_listen_addr: "{{ lb.internal_bind_address }}"
+  master_node_mysql_listen_ip_address: "{% if is_cluster %}{{hostvars['cluster_master'].ansible_host}}{% else %}{{lb.internal_bind_address}}{% endif %}"
+########################
+main_webapp_name: "{{ansible_hostname}}"
+external_ip_address: "{{lb.external_bind_address}}"
+
+
+server_urls_hosts_file_block: "{{lb.server_monitor_1_external_addr}} zabbix.{{lb.server_monitor_1_external_addr}}\n{{lb.server_monitor_1_external_addr}} graphite.{{lb.server_monitor_1_external_addr}}\n{{lb.server_monitor_1_external_addr}} graphana.{{lb.server_monitor_1_external_addr}}\n{{lb.server_monitor_1_external_addr}} prometheus.{{lb.server_monitor_1_external_addr}}\nclustercontrol.{{lb.server_monitor_1_external_addr}}\n"
+
+inventory_hosts_file_block: "{% for node in groups['all'] %}{% if not ('.' in hostvars[node].inventory_hostname) %}{{hostvars[node].ansible_host}} {{hostvars[node].inventory_hostname}}\n{% else %}{% endif %}{% endfor %}\n"
+
+########################
+# For more information about default variables see:
+# http://www.ansibleworks.com/docs/playbooks_variables.html#id26
+#
+# openssl_keys:
+#   - name: mykey.key
+#     key: "mykeycontents"
+# openssl_certs:
+#   - name: mycert.crt
+#     cert: "mycertcontents"
+# openssl_self_signed:
+#   - name: 'foobar.com'
+#     domains: ['*.foobar.com', 'foobar.com']
+#     country: 'DE'
+#     state: 'Bavaria'
+#     city: 'Munich'
+#     organization: 'Foo Bar'
+#     unit: ''
+#     email: 'foo@bar.com'
+#     days: 3650
+# openssl_config:
+#   default_bits: 2048
+#   countryName_default: DE
+#   stateOrProvinceName_default: Bavaria
+#   localityName_default: Munich
+#   organizationName_default: 'My Organization'
+#   organizationalUnitName_default: 'My Organization Unit'
+#   commonName_default: 'foobar.com'
+# openssl_config_template: templates/openssl.cnf
+
+# keys to import
+openssl_keys: []
+# certificates to import
+openssl_certs: []
+# path to certificates
+openssl_certs_path: /etc/ssl/certs
+# path to keys
+openssl_keys_path: /etc/ssl/private
+# self signed certificates
+openssl_self_signed: []
+# config variables
+openssl_config: {}
+# config template to install, relative to the ansible repository root
+openssl_config_template:
+
+########################
+##########
+phabricator_domain: phabricator.local
+phabricator_path: "{{ www_root}}/phabricator"
+repositories_path: /var/repo/
+phabricator_domains: 
+  - "phabricator.cybermedsolutions.com"
+  - "phabricator.{{ansible_hostname}}"
+  
+phabricator_base_uri: 
+  - "http://{{phabricator_domains[0]}}/"
+
+ssh_service_name: "{% if ansible_pkg_mgr=='apt' %}ssh{% else %}sshd{% endif %}"
+nfs_service_name: "{% if ansible_pkg_mgr=='apt' %}nfs{% else %}nfs-server{% endif %}"
+
+# java_packages: [] #set in cakling role or playbook
+php5_fpm_service_name: "{% if ansible_pkg_mgr=='apt' %}php5-fpm{% else %}php-fpm{% endif %}"
+
+install_redis_stat: false
+
+# [smtp.gmail.com]:587 <USERNAME@yourdomain.com>:PASSWORD
+# postfix_sasl_password_line: "[smtp2.simedarbygroup.com]:25"
+postfix_main_cf_line: "relayhost = [smtp2.simedarbygroup.com]:25"
+postfix_sasl_password_line: ""
+
+
+#defaults - overridden in site
+webapp_git_clone: true
+webapp_git_relativepath: ""
+webapp: ""
+webapp_common_prefix: ""
+
+#default request timeout!!!
+webapp_request_timeout: 600
+webapp_max_input_time: 600
+
+#allow long queries
+mysql_config_interactive_timeout: 28800
+mysql_config_wait_timeout: 28800
+
+
+webapp_relativepath: "{% if webapp_git_clone == '' %}{{webapp_copy_code_relativepath}}{% else %}{{webapp_git_relativepath}}{% endif %}"
+
+opcache_file_cache_path_base: "/var/www/opcache/php"
+
+haproxy_securepassword: "{{vaulted_haproxy_securepassword}}"
+
+zabbix_adminuser_password: "{{vaulted_zabbix_adminuser_password}}"
+
+
+
+#used for webapp deployment
+webapp_db_dump_file: ""
+webapp_skip_git_clone: false
+webapp_skip_db_import: false
+webapp_drop_database: true
+
+##
+play_run_all: true
+is_initial_run: true
+
+##################
+# used for extra vars_files for including in playbook
+##################
+pb_app_vars_file: "{% if app_vars is defined %}{{app_vars}}{% else %}app_vars/dummy.yml{% endif %}"
+pb_site_vars_file: "{% if site_vars is defined %}{{site_vars}}{% else %}site_vars/dummy.yml{% endif %}"
+pb_config_vars_file: "{% if config_vars is defined %}{{config_vars}}{% else %}config_vars/dummy.yml{% endif %}"
+
+
+###shared between redis and haproxy
+redis_listen_address: "{{lb.internal_bind_address}}"
+redis_auth_password: "{{vaulted_redis_auth_password}}"
+redis_listen_port: 6379
+##
+redis_listen_address_for_clients: "{% if is_cluster and is_part_of_cluster %}{{lb.internal_loadbalanced_ip}}{% else %}{{lb.internal_bind_address}}{% endif %}"
+php_session_save_path_redis_base: "tcp://{{redis_listen_address_for_clients}}:{{redis_listen_port}}"
+php_session_save_path_redis: "{% if redis_auth_password != '' %}{{php_session_save_path_redis_base}}?auth={{redis_auth_password}}{% else %}{{php_session_save_path_redis_base}}{% endif %}"
+
+
+#for nginx server name
+zabbix_server_url: "zabbix.{{lb.server_monitor_1_external_addr}}"
+www_root_zabbix: "/usr/share/zabbix"
+#
+graphite_server_url: "graphite.{{lb.server_monitor_1_external_addr}}"
+grafana_server_url: "graphana.{{lb.server_monitor_1_external_addr}}"
+haproxy_server_url: "haproxy.{{lb.server_monitor_1_external_addr}}"
+
+#
+prometheus_server_url: "prometheus.{{lb.server_monitor_1_external_addr}}"
+node_exporter_server_url: "node_exporter.{{lb.internal_bind_address}}"
+mysqld_exporter_server_url: "mysqld_exporter.{{lb.internal_bind_address}}"
+
+##
+cluster_control_server_url: "clustercontrol.{{lb.cluster_controller_1_internal_addr}}"
+cmonapi_external_url: "http://{{cluster_control_server_url}}/cmonapi"
+
+#
+rocket_chat_server_url: "rocket_chat.{{lb.nfs_server_1_internal_addr}}"
+
+#cmon_api_rpc_token: "{{ lb.cluster_controller_1_internal_addr | to_uuid }}"
+#taken from docker container severalnines/clustercontrol:latest using commands
+# docker exec -it clustercontrol /bin/bash
+# cat /etc/cmon.cnf
+cmon_api_rpc_token: ""
+
+#php
+system_service_directory: "{% if ansible_pkg_mgr=='apt' %}/etc/init{% else %}/usr/lib/systemd/system{% endif %}"
+user_system_scripts_directory: /var/scripts/system
+user_scripts_directory: /var/scripts/user
+startup_service_file: run_startup_scripts.conf
+
+#install zabbix_percona_monitoring_plugins as template is outdated -
+install_zabbix_percona_monitoring_plugins: true #new template works
+
+#do not install as doesnt work??
+install_zabbix_clustercontrol_monitoring_plugins: true
+
+#do not install as not very reliable?? overloads CPU - also names conflicts with Percona Template
+install_zabbix_from_dual_mpm: false
+
+#
+create_docker_data_only_container: "{% if True or is_cluster_controller %}True{% else %}False{% endif %}"
+
+###
+zabbix_server_listenport: 10050
+zabbix_agent_listenport: 10051
+
+##

@@ -1,0 +1,4 @@
+MYSQL_USERNAME=root
+MYSQL_PASSWORD='{{ db.root_pass}}'
+MYSQL_HOST='{{ db.mysql_listen_addr }}'
+MYSQL_PORT='{{ db.mysql_listen_port }}'

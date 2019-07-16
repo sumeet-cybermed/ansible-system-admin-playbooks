@@ -1,0 +1,66 @@
+---
+- name: ensure /etc/zabbix/zabbix_server.conf.d directory exists
+  file:
+    path: /etc/zabbix/zabbix_server.conf.d
+    state: directory
+    owner: zabbix
+    group: zabbix
+
+- name: ensure /etc/zabbix/zabbix_server.conf.d is included in /etc/zabbix_agentd.conf
+  lineinfile:
+    dest: /etc/zabbix/zabbix_server.conf
+    line: Include=/etc/zabbix/zabbix_server.conf.d  #do not append slash - causes double import and hence failure
+    state: present
+
+- name: "Configure user_zabbix.conf"
+  template: src=user_zabbix.conf
+            dest=~/.zabbix
+            owner=zabbix
+            group=zabbix
+            mode=0644
+
+### zabbix_tool
+- name: download zabbix_tool
+  git: repo=https://github.com/BrianGallew/zabbix_tool.git dest={{www_root_zabbix}}/tools/zabbix_tool update=no accept_hostkey=yes depth=1
+
+### zabbix_cli
+- name: download zabbix_cli
+  git: repo=https://github.com/usit-gd/zabbix-cli.git dest={{www_root_zabbix}}/tools/zabbix_cli update=no accept_hostkey=yes depth=1
+
+### grafana-zabbix
+- name: install alexanderzobnin-zabbix-app
+  shell: grafana-cli plugins install alexanderzobnin-zabbix-app;service grafana-server restart
+
+
+##### clustercontrol templates for zabbix ##############
+- name: install clustercontrol templates for zabbix
+  shell: "echo '
+
+        ----------------------------------------------
+        see    http://severalnines.com/blog/clustercontrol-template-zabbix
+        ----------------------------------------------
+
+          1. Due to this bug, we need to manually create the value mapping for ClusterControl items in Zabbix server.
+          https://www.zabbix.com/documentation/3.0/manual/config/items/item?s[]=value&s[]=mappingLog into the Zabbix front-end UI and go to Administration > General. Select Value Mapping (the drop-down list) > Create Value Map as per below:
+
+          Name: ClusterControl DB Cluster Status
+          Value:
+              0 = Failed
+              1 = Active
+              2 = Degraded
+              3 = Unknown
+
+          Name: ClusterControl DB Backup Status
+          Value:
+              0 = No error
+              1 = Some backups got error
+
+        ----------------------------------------------
+        2.  Import the XML template using the Zabbix UI (Configuration > Templates > Import).
+        /roles/zabbix-server/files/zabbix-templates/zbx_clustercontrol_templates.xml
+        https://raw.githubusercontent.com/severalnines/s9s-admin/master/plugins/zabbix/server/zbx_clustercontrol_templates.xml
+        ----------------------------------------------
+        '
+        "
+  ignore_errors: yes #incase already created in same task running on same pc when running many roles-types in local mode
+

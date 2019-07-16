@@ -1,0 +1,56 @@
+- name: Include default vars
+  tags: ['always']
+  include_vars: default.yml
+
+- name: Include persisted vars for this host
+  tags: ['always']
+  include_vars: "{{ item }}"
+  with_first_found: 
+    - "{{user_websites_installed_file}}" #if created by userapp install app
+    - user_websites_installed.yml
+    
+####
+- name: Ensure Dash Dir Exists
+  tags: ['always']
+  file: path={{ item }} state=directory owner={{ web_user }} group={{ web_group }} 
+  with_items:
+    - "{{ www_root }}"
+    - "{{ dashboard_doc_root }}"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+
+  
+- name: Copy Dash contents
+  copy: src=/vagrant/provisioning/ansible/roles/dashboard/templates/{{item.src}}/ dest={{ item.dest }}/ group={{web_group}} owner={{web_user}}
+  with_items:
+    - {src: www_root, dest: "{{www_root}}" }
+    - {src: dashboard, dest: "{{dashboard_doc_root}}" }
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  ignore_errors: is_clustered_storage_var_www #copying fails with glusterfs sometimes
+    
+- name: Template Dash Index Pages
+  template: 
+    src: "{{ item.path }}/{{item.name}}"
+    dest: "{{ item.path }}/{{item.name}}"
+  with_items:
+    - {path: "{{www_root}}", name: 'content.txt'}
+    - {path: "{{www_root}}", name: 'index.html'}
+    - {path: "{{dashboard_doc_root}}", name: 'content.txt'}
+    - {path: "{{dashboard_doc_root}}", name: 'index.html'}
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+  ignore_errors: is_clustered_storage_var_www #copying fails with glusterfs sometimes
+
+
+# - name: Set up pam auth service
+  # template: src=../../admin/templates/etc/pam.d/pam_nginx dest=/etc/pam.d/pam_nginx owner=root group=root mode=0644
+  #
+  
+#- name: Set up dash vhost
+#  template: src=etc/nginx/conf.d/{{item}}.conf dest=/etc/nginx/conf.d/{{item}}.conf owner=root group=root mode=0644
+#  with_items:
+#    # dont - becomes default server which we do not want
+#    # - www_root
+#    #### - dashboard
+  
+###  
+- name: restart nginx
+  service: name=nginx state=restarted  

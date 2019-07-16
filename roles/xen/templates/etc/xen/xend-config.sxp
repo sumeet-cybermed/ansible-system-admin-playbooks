@@ -1,0 +1,7 @@
+﻿(network-script network-bridge)
+#(network-script network-nat)
+#(network-script network-route) 
+
+(vif-script vif-bridge)
+#(vif-script vif-nat)
+#(vif-script vif-route)

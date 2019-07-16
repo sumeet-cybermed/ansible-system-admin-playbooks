@@ -1,0 +1,6 @@
+---
+- name: Install MySQL Variant
+  include: ../roles/mysql-variants/tasks/main.yml
+  when: "db_type=='mysql' or db_type is undefined"
+  tags: ['always']
+    

@@ -1,0 +1,101 @@
+### lxd web panel
+- name: install lxd web panel
+  shell: "wget http://lxc-webpanel.github.io/tools/install.sh -O - | bash"
+  when: install_lxcwebpanel is defined and install_lxcwebpanel  
+  
+# - name: update lxd web panel
+  # shell: "wget http://lxc-webpanel.github.io/tools/update.sh -O - | bash"
+
+### virt-manager  
+- name: install virt-manager (apt)
+  tags:  install_packages
+  apt: name={{item}} state={{installed_package_state}}  update_cache=yes
+  with_items:
+    - virt-manager
+  when: ansible_pkg_mgr=='apt' and install_virt_manager is defined and install_virt_manager
+  
+- name: install virt-manager (yum)
+  tags:  install_packages
+  yum: name={{item}} state={{installed_package_state}}
+  with_items:
+    - virt-manager
+  when: ansible_pkg_mgr=='yum' and install_virt_manager is defined and install_virt_manager  
+  
+### openxenmanager
+- name: create cloned repo dir
+  tags: [ 'always' ]
+  file:
+    path: /usr/bin/openxenmanager
+    state: directory
+    
+- name: clone openxenmanager repo
+  tags: [ install_packages ]
+  git:
+    repo: https://github.com/OpenXenManager/openxenmanager.git
+    dest: /usr/bin/openxenmanager
+    accept_hostkey: yes 
+    depth: 1
+  when:  install_openxenmanager is defined and install_openxenmanager
+    
+- name: run openxenmanager    
+  shell: /usr/bin/openxenmanager/openxenmanager &
+  when:  install_openxenmanager is defined and install_openxenmanager 
+  
+### virtualizor
+- name: install virtualizor
+  tags: [ install_packages ]
+  shell: "wget -N http://files.virtualizor.com/install.sh;chmod 0755 install.sh;./install.sh email={{admin_email}} kernel=xen"
+  ignore_errors: no
+  when:  install_virtualizor is defined and install_virtualizor
+  
+- name: install ConVirt
+  tags: [ install_packages ]
+  shell: /bin/true
+  when:  install_convirt is defined and install_convirt
+ 
+## openqrm
+- name: Install MySQL ppa repo
+  tags: [ install_packages ]
+  shell: add-apt-repository  ppa:ondrej/mysql-5.6
+  when:  install_openqrm is defined and install_openqrm
+ 
+- name: ensure svn dir exists 
+  tags: [ install_packages ]
+  file: path=/var/downloads/openqrm/svn state=directory
+  when:  install_openqrm is defined and install_openqrm
+
+- name: install pxelinux
+  tags: [ install_packages ]
+  apt: name=pxelinux
+  when:  install_openqrm is defined and install_openqrm
+  
+- name: mktftp dir  
+  tags: [ install_packages ]
+  file: path=/usr/share/openqrm/tftpboot state=directory
+  when:  install_openqrm is defined and install_openqrm
+  
+- name: copy pxelinux file
+  tags: [ install_packages ]
+  shell: cp -f /usr/lib/PXELINUX/pxelinux.0 /usr/share/openqrm/tftpboot/
+  when:  install_openqrm is defined and install_openqrm
+  
+- name: checkout openqrm  
+  tags: [ install_packages ]
+  shell: cd /var/downloads/openqrm; svn checkout svn://svn.code.sf.net/p/openqrm/code/trunk svn;
+  when:  install_openqrm is defined and install_openqrm
+  
+- name: make openqrm, make
+  tags: [ install_packages ]
+  shell: cd /var/downloads/openqrm/svn/src;make
+  when:  install_openqrm is defined and install_openqrm
+
+- name: make openqrm, make install
+  tags: [ install_packages ]
+  shell: cd /var/downloads/openqrm/svn/src;make install
+  when:  install_openqrm is defined and install_openqrm
+
+- name: make openqrm, make start
+  tags: [ install_packages ]
+  shell: cd /var/downloads/openqrm/svn/src;make start 
+  when:  install_openqrm is defined and install_openqrm
+  

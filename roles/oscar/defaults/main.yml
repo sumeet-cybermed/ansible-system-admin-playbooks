@@ -1,0 +1,8 @@
+oscar_major_version: 15
+apt_oscar_url: http://sourceforge.net/projects/oscarmcmaster/files/Oscar%20Debian%2BUbuntu%20deb%20Package
+apt_oscar_local_download_dir: /var/downloads/oscar
+apt_oscar_deb_file_name: oscar_emr15-12beta184.deb
+force_tomcat6_java_home: /usr/lib/jvm/java-6-oracle
+force_tomcat7_java_home: /usr/lib/jvm/java-7-oracle
+
+

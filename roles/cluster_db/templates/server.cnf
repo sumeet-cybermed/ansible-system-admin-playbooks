@@ -1,0 +1,142 @@
+# For advice on how to change settings please see
+# http://dev.mysql.com/doc/refman/5.6/en/server-configuration-defaults.html
+
+[mysqld_safe]
+log-error=/var/log/mysqld.log
+
+#pid-file directive should be here for standalone mysql
+pid-file=/var/lib/mysql/mysql.pid
+
+# this is read by the standalone daemon and embedded servers
+[server]
+#
+# Remove leading # and set to the amount of RAM for the most important data
+# cache in MySQL. Start at 70% of total RAM for dedicated server, else 10%.
+# innodb_buffer_pool_size = 128M
+#
+# Remove leading # to turn on a very important data integrity option: logging
+# changes to the binary log between backups.
+# log_bin
+#
+# Remove leading # to set options mainly useful for reporting servers.
+# The server defaults are faster for transactions and fast SELECTs.
+# Adjust sizes as needed, experiment to find the optimal values.
+# join_buffer_size = 128M
+# sort_buffer_size = 2M
+# read_rnd_buffer_size = 2M
+
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+
+bind-address={{ db.mysql_listen_addr }}
+# bind-address    = 0.0.0.0
+
+port			= {{db.mysql_listen_port}}
+tmpdir			= /tmp
+lc-messages-dir	= /usr/share/mysql
+
+slow_query_log_file             = /var/log/mysql.slow.log
+slow_query_log                  = 1
+log_slow_admin_statements = 1
+long_query_time = 0.1
+
+# allow indexing words of one char - default is 4 - need to restart  mysql and reindex after changing:  OPTIMIZE TABLE  xxx
+innodb_ft_min_token_size=1
+ft_min_word_len = 1
+
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+
+# Recommended in standard MySQL setup
+sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES 
+
+
+#sumeet - important to have mixedcase/variable tablename on linux just like in windows
+lower_case_table_names = 1
+skip-external-locking
+
+expire_logs_days	= 10
+max_binlog_size		= 100M
+
+###
+key_buffer = 128M
+
+max_allowed_packet = 512M
+thread_stack = 192K
+thread_cache_size = 100
+
+table_open_cache = 16384
+table_definition_cache = 8192
+
+sort_buffer_size = 64M
+read_buffer_size = 64M
+read_rnd_buffer_size = 64M
+join_buffer_size = 64M
+
+
+
+myisam_sort_buffer_size = 64M
+myisam_use_mmap = 1
+thread_concurrency = 10
+
+interactive_timeout={{mysql_config_interactive_timeout}}
+wait_timeout={{mysql_config_wait_timeout}}
+
+#causes error : reconnect = 1
+
+myisam-recover = BACKUP,FORCE
+
+query_cache_limit = 10M
+query_cache_size = 1024M
+query_cache_type = 1
+
+join_buffer_size = 4M
+
+expire_logs_days        = 10
+max_binlog_size         = 100M
+
+key_buffer_size=20M
+
+# for deployment on 8GB +
+# innodb_buffer_pool_size = 2048M
+##set to 70% of RAM
+innodb_buffer_pool_size = 512M
+#
+
+innodb_log_buffer_size = 16M
+innodb_flush_log_at_trx_commit = 2
+innodb_thread_concurrency = 8
+innodb_read_io_threads = 64
+innodb_write_io_threads = 64
+innodb_io_capacity = 50000
+innodb_flush_method = O_DIRECT
+innodb_file_per_table
+innodb_additional_mem_pool_size = 128M
+innodb_buffer_pool_instances = 1
+innodb_sort_buffer_size = 64M
+
+
+innodb_support_xa = 0
+innodb_commit_concurrency = 8
+innodb_old_blocks_time = 1000
+
+#Avoid Row size too large (> 8126) error
+innodb_log_file_size = 512M
+innodb_strict_mode = 0
+innodb_file_format=Barracuda
+
+
+#
+#https://www.percona.com/blog/2011/03/23/using-flexviews-part-one-introduction-to-materialized-views/
+##https://mariadb.com/kb/en/mariadb/flexviews/
+##mandatory for flexviews
+#binlog_format = ROW
+#server_id=999
+#
+###recomneded for flexviews
+#transaction-isolation = READ-COMMITTED
+#sync_binlog=1
+#sync_frm=1
+#innodb_safe_binlog=1
+###
+

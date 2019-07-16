@@ -1,0 +1,63 @@
+
+- debug: var={{item}}
+  with_items:
+    - container_name
+    - add_lxc_nic_maps_phys
+    - parsed_add_nic_map
+    - apply_nic_map
+    - host_mapped_nic
+    - guest_mapped_nic
+    - guest_ipaddr
+    - guest_ip_netmask
+    - guest_ip_gateway
+    
+- name: Check whether even one line has been added to file already!
+  tags: [ 'always' ]
+  shell: grep -Fxq 'iface br{{host_mapped_nic}}' {{host_network_interfaces_file}}
+  register: hostlineexists
+  always_run: True
+  ignore_errors: True
+  changed_when: False
+  
+- debug: var=hostlineexists    
+
+- name: apply host nic maps
+  lineinfile:
+    dest: "{{item.path}}"
+    line: "{{item.line}}"
+    state: present
+    create: true
+  with_items:
+    - {path: "{{host_network_interfaces_file}}", line: "{{host_network_interfaces_file_block}}", state: 'present'}
+  when: hostlineexists.rc != 0
+
+- name: Check whether even one line has been added to containerfile already!
+  tags: [ 'always' ]
+  shell: grep -Fxq 'lxc.network.name={{guest_mapped_nic}}' {{container_config_file}}
+  register: lineexists
+  always_run: True
+  ignore_errors: True
+  changed_when: False
+  
+- debug: var=lineexists    
+
+- name: ensure target container folder exists
+  tags: [ 'always' ] 
+  file:
+    path: "{{item}}"
+    state: directory
+  with_items:
+    - "{{container_path}}"
+  when: lineexists.rc != 0
+
+- name: apply nic maps for container
+  lineinfile:
+    dest: "{{item.path}}"
+    line: "{{item.line}}"
+    state: present
+    create: true
+  with_items:
+    - {path: "{{container_config_file}}", line: "{{container_config_file_block}}", state: 'present'}
+    - {path: "{{container_network_interfaces_file}}", line: "{{container_network_interfaces_file_block}}", state: 'present'}
+  when: lineexists.rc != 0
+    

@@ -1,0 +1,8 @@
+clustercontrol
+    - docker container - data security and persistence
+    - does not restart on boot
+
+zabbix
+    redis monitoring
+    nfs stats monitoring
+

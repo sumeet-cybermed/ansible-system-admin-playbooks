@@ -1,0 +1,166 @@
+---
+- name: download and create container - {{cluster_control_docker_container_name}}
+  tags:
+    - install_packages
+  docker_container:
+      name: "{{cluster_control_docker_container_name}}"
+      image: "{{cluster_control_docker_image_name}}"
+      memory_reservation: 4096MB
+      keep_volumes: yes #retain volumes associated with a removed container.
+      restart_policy: "no" #do not restart - we use a service wrapper
+      recreate: no #do not recreate if present
+#      ignore_image: True #ignore image version - only from v2.2
+      state: present #create if not present
+      pull: no #only pull an image when missing.
+      tty: yes #Allocate a psuedo-TTY.
+      trust_image_content: yes #skip image verification.
+      hostname: "{{cluster_control_docker_container_name}}"
+      etc_hosts: {}
+      #volumes_from seems to be very slow - commented out
+      volumes_from: #List of container names or Ids to get volumes from
+        - "{{docker_data_only_container_name}}"
+      published_ports:
+        - 127.0.0.1:{{cluster_control_docker_container_published_http_port}}:80 #http
+        - 127.0.0.1:{{cluster_control_docker_container_published_https_port}}:443 #https
+        - 127.0.0.1:{{cluster_control_docker_container_published_mysql_port}}:3306 #mysql
+#        - 0.0.0.0:51510:9510 #cmonapi
+#        - 0.0.0.0:51022:22 #ssh
+#        - 0.0.0.0:51600:9600 #HAproxy stats
+#        - 0.0.0.0:51999:9999 #netcat (backup streaming)
+
+- name: Install {{cluster_control_docker_container_name}} systemd script
+  tags:
+    - always
+  template: src=cluster_control_docker_container_name.service dest=/etc/systemd/system/{{cluster_control_docker_container_service_name}}.service
+
+- name: start {{cluster_control_docker_container_name}} - docker
+  tags:
+    - always
+  shell: docker start {{cluster_control_docker_container_name}}
+
+- name: start and enable {{cluster_control_docker_container_name}}
+  tags:
+    - always
+  service: name={{cluster_control_docker_container_service_name}} state=restarted enabled=yes
+
+- name: Wait for the docker container to start
+  wait_for:
+      port:  "{{cluster_control_docker_container_published_http_port}}"
+      host: 127.0.0.1
+      state: started
+      delay: 1
+      timeout: 20
+  ignore_errors: no
+  tags:
+    - always
+
+- name: register ip addr of docker container
+  shell: docker inspect -f {% raw %} '{{ .NetworkSettings.IPAddress }}' {% endraw %}{{cluster_control_docker_container_name}}
+  register: container_ip_addr_result
+  tags:
+      - always
+
+- name: grant all permissions on cluster master for user cmon so existing cluster can be added
+  tags: [ 'always' ]
+  mysql_user:
+    name: "'cmon'@'{{item}}'"
+    host: "{{db.master_node_mysql_listen_ip_address}}"
+    password: "{{ db.root_pass }}"
+    login_port:  "{{db.mysql_listen_port}}"
+    login_user: root
+    login_password: "{{ db.root_pass }}"
+    check_implicit_admin: yes
+    priv: "*.*:ALL,GRANT"
+  with_items:
+      - "%"
+      - "{{lb.cluster_controller_1_external_addr}}"
+      - "{{lb.cluster_controller_1_internal_addr}}"
+      - "{{container_ip_addr_result.stdout}}"
+  ignore_errors: false
+
+
+- name: ensure ssh keys dir exists
+  shell: docker exec -d -it {{cluster_control_docker_container_name}} /bin/bash -c 'mkdir -p /root/.ssh'
+  tags:
+      - always
+
+- name: template {{cluster_control_docker_container_name}} files
+  template:
+       src: "{{item.src}}"
+       dest: "{{item.dest}}"
+  with_items:
+    - {src: cmon.cnf, dest: "/tmp/{{cluster_control_docker_container_name}}_cmon.cnf"}
+    - {src: root.my.cnf, dest: "/tmp/{{cluster_control_docker_container_name}}_root.my.cnf"}
+  tags:
+    - always
+
+
+# tocms: this is not working - we need to manually do these steps
+# if canot ping hosts, service docker restart;
+# setenforce 0; docker exec -it cluster_control /bin/bash;
+# setenforce 0; ssh-keygen -q -t rsa -N ''; ssh-copy-id 10.10.10.199; ssh-copy-id 10.10.10.201; ssh-copy-id 10.10.10.202; ssh-copy-id 10.10.10.203;
+- name: copy private and pub keys to container so clustercontrol can ssh to hosts using dsame credentials as container host
+  shell: docker cp {{item.src}} {{cluster_control_docker_container_name}}:{{item.dest}}
+  with_items:
+    - {src: /root/.ssh/id_rsa, dest: /root/.ssh/}
+    - {src: /root/.ssh/id_rsa.pub, dest: /root/.ssh/}
+    - {src: /root/.ssh/authorized_keys, dest: /root/.ssh/}
+    - {src: /root/.ssh/known_hosts, dest: /root/.ssh/}
+    - {src: "/tmp/{{cluster_control_docker_container_name}}_cmon.cnf", dest: "/etc/cmon2.cnf"}
+    - {src: "/tmp/{{cluster_control_docker_container_name}}_root.my.cnf", dest: "/root/.my.cnf"}
+  tags:
+    - always
+
+- name: ensure keys for cluster nodes are added to /root/.ssh/known_hosts
+  shell:  "docker exec -d -it {{cluster_control_docker_container_name}} /bin/bash -c 'ssh-keyscan -H {{item}} >> /root/.ssh/known_hosts' "
+  with_items:
+    "{{cluster_ip_addrs_list}}"
+  tags:
+    - always
+
+- name: ensure keys can be read by cmon daemon!
+  shell:  docker exec -d -it {{cluster_control_docker_container_name}} {{item}}
+  with_items:
+    - "chown root:root /root/.ssh/*"
+    - "chmod 0600 /root/.ssh/*"
+    - "echo 'enable_mysql_timemachine=1' >>  /etc/cmon.cnf"
+    - "service cmon restart"
+  tags:
+    - always
+  ignore_errors: true
+
+#always create nginx virtual host so we can switch fromapache to nginx even if installing from script
+- name: Configure /etc/nginx/conf.d/clustercontrol.conf
+  template: src=cc.nginx.conf dest=/etc/nginx/conf.d/cluster_control.conf owner=root group=root mode=0644
+  notify: nginx restart
+  tags:
+    - always
+
+- name: get cmon_api_rpc_token
+  shell: "docker exec -i {{cluster_control_docker_container_name}} /bin/bash -c \"cat /etc/cmon.cnf | grep 'rpc_key' | awk -F'=' '{print $2}' \" "
+  register: cmon_api_rpc_token
+  tags:
+    - always
+  ignore_errors: true
+
+- name: echo cmon_api_rpc_token
+  shell: "echo {{cmon_api_rpc_token.stdout}};echo {{cmon_api_rpc_token.stdout}} > /etc/cmon_api_rpc_token.txt"
+  tags:
+    - always
+  ignore_errors: true
+
+- name: debug facts
+  debug: msg="{{item}}"
+  with_items:
+    - "container_ip_addr_result: {{container_ip_addr_result.stdout}}"
+    - "cmon_api_rpc_token: {{cmon_api_rpc_token.stdout}}"
+  tags:
+    - always
+  ignore_errors: true
+
+- name: "fixing ERROR 'Can't connect (SSH): libssh auth error: Failed to read private key /root/.ssh/id_rsa (root, key=/root/.ssh/id_rsa)'"
+  shell: echo  "docker exec -it {{cluster_control_docker_container_name}} /bin/bash;\nssh-keygen;\nssh-copy-id {{cluster_master_ip_addr}};\n#repeat for other cluster nodes"
+  ignore_errors: true
+
+
+

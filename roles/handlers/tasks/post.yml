@@ -1,0 +1,15 @@
+
+- name: add hosts entries block for nginx prefixed vhosts
+  blockinfile:
+    dest: /etc/hosts
+    marker: "{{item.name}}"
+    block: "{{item.block}}"
+    state: present
+    create: yes
+    backup: yes
+  when: True
+  with_items:
+    - {name: "# {mark} ANSIBLE MANAGED BLOCK - ALL INVENTORY HOSTS #", block: "{{inventory_hosts_file_block}}"}
+    - {name: "# {mark} ANSIBLE MANAGED BLOCK - SERVER URLS #", block: "{{server_urls_hosts_file_block}}"}
+  tags:
+    - always

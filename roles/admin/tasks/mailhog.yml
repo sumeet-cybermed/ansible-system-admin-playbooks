@@ -1,0 +1,103 @@
+﻿
+#
+# MailHog setup
+#
+- name: Ensure mailhog directory exists
+  tags: [ 'always' ]
+  file:
+    path: "{{ mailhog_install_dir }}"
+    owner: root
+    group: root
+    state: directory
+    mode: 0755
+  # tags:  [ 'admin', 'mailhog' ]
+
+- name: ensure download dir exists
+  tags: [ install_packages ]
+  file: path=/var/downloads/mailhog state=directory 
+  
+- name: check if mail hog has been downloaded  
+  tags: [ 'always' ]
+  stat: path=/var/downloads/mailhog/{{ mailhog_file_name }}
+  register: mailhog_downloaded
+  
+- name: Download MailHog to downloads
+  tags: [ install_packages ]
+  get_url:
+    url: "{{ mailhog_binary_url }}"
+    dest: "/var/downloads/mailhog/"
+    owner: root
+    group: root
+    mode: 0755
+    force: no
+  when: not mailhog_downloaded.stat.exists
+  # tags:  [ 'admin', 'mailhog' ]
+
+- name: Copy MailHog to /mailhog
+  tags: [ install_packages ]
+  shell: cp -rf /var/downloads/mailhog/{{ mailhog_file_name }} {{ mailhog_install_dir }}/mailhog 
+  # tags:  [ 'admin', 'mailhog' ]  
+
+- name: Install mailhog init script
+  template:
+    src: mailhog_init
+    dest: /etc/init.d/mailhog
+    owner: root
+    group: root
+    mode: 0755
+  # tags:  [ 'admin', 'mailhog' ]
+
+- name: Ensure mailhog is enabled and will start on boot.
+  service:
+    name: mailhog
+    state: started
+    enabled: yes
+  # tags:  [ 'admin', 'mailhog' ]
+
+#  prefix zz to vhost file so it is not uised bu nginx by default if another more matching file exits
+- name: Set up Mailhog virtualhost
+  template:
+    src: etc/nginx/conf.d/mail.conf
+    dest: /etc/nginx/conf.d/zz_mail-{{ default_backend }}.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: nginx reload
+  # tags:  [ 'admin', 'mailhog' ]  
+######  
+
+- name: Install sSMTP.
+  tags:  install_packages
+  action: "{{ ansible_pkg_mgr }} pkg=ssmtp state={{installed_package_state}}"
+
+- name: Copy sSMTP configuration.
+  template:
+    src: etc/ssmtp/ssmtp.conf
+    dest: /etc/ssmtp/ssmtp.conf
+    owner: root
+    group: root
+    mode: 0644
+  # tags:  [ 'admin', 'mailhog' ]
+
+    
+- name: Set up PHP sendmail
+  ini_file:
+    dest: "{{ item }}"
+    section: "mail function"
+    option: sendmail_path
+    value: "/usr/sbin/ssmtp -t"
+  with_items:
+      - /etc/php5/fpm/php.ini
+      - /etc/php5/cli/php.ini
+  when: "ansible_pkg_mgr == 'apt'"
+
+- name: Set up PHP sendmail
+  ini_file:
+    dest: "{{ item }}"
+    section: "mail function"
+    option: sendmail_path
+    value: "/usr/sbin/ssmtp -t"
+  with_items:
+      - /etc/php.d/php.ini
+      # - /etc/php5/cli/php.ini
+  when: "ansible_pkg_mgr == 'yum'"

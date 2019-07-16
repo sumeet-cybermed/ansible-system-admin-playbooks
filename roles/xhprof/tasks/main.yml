@@ -1,0 +1,94 @@
+---
+# - name: Install XHprof (apt)
+  # action: "{{ ansible_pkg_mgr }} name=php5-xhprof state=present"
+  # when: "ansible_pkg_mgr == 'apt'"
+  # 
+
+# - name: Install XHprof (yum)
+  # action: "{{ ansible_pkg_mgr }} name=php-xhprof state=present"
+  # when: "ansible_pkg_mgr == 'yum'"
+  # 
+
+- name: Install PECL modules
+  command: pecl install {{ item }}
+  tags: [ 'always' ]
+  register: pecl_result
+  changed_when: "'already installed' not in pecl_result.stdout"
+  failed_when: "'already installed' not in pecl_result.stdout and 'completed successfully' not in pecl_result.stdout"
+  with_items:
+    - xhprof-beta
+  when: "ansible_pkg_mgr=='apt'"
+  ignore_errors: true
+
+- name: install xhprof
+  tags:  install_packages
+  yum: name=xhprof state={{installed_package_state}} enablerepo=remi,remi-php55,remi-php56
+  when: "ansible_pkg_mgr=='yum'"
+  ignore_errors: true
+
+- name: set permissions for xhprof dir
+  tags: [ 'always' ]
+  file:
+    path: "{{xhprof_root}}"
+    state: directory
+    recurse: yes
+    owner: "{{web_user}}"
+    group: "{{web_group}}"
+  ignore_errors: true
+
+- name: Get xhprof code
+  git: repo=git://github.com/preinheimer/xhprof.git dest={{ xhprof_root }} update=no accept_hostkey=yes depth=1
+  tags:  install_packages
+  ignore_errors: true
+
+- name: ensure mysql is started using defined handler
+  service: name={{mysql_service}} state=started pattern="[  OK  ]"
+  async: 5
+  poll: 2
+  when: (not is_clustered_db or cluster_master is defined)
+  ignore_errors: true #can hang on centos/rhel
+
+- name: Setup xhprof database
+  mysql_db:
+    name: xhprof
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_secure_password }}"
+    login_port: "{{db.mysql_listen_port}}"
+  when: (not is_clustered_db or cluster_master is defined)
+  ignore_errors: true #can hang on centos/rhel
+
+
+- name: Create the database table
+  mysql_db: name=xhprof state=import target=/vagrant/provisioning/ansible/roles/xhprof/templates/install-db.sql
+    login_user="{{ mysql_root_user }}"
+    login_password="{{ mysql_root_secure_password }}"
+    login_port="{{db.mysql_listen_port}}"
+  when: (not is_clustered_db or cluster_master is defined)
+  ignore_errors: true #can hang on centos/rhel
+
+
+- name: Install xhprof dependencies
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  tags:  install_packages
+  with_items:
+    - graphviz
+  ignore_errors: true
+
+- name: Configure xhprof config.php
+  template: src=config.php dest={{ xhprof_root }}/xhprof_lib/config.php owner=root group=root mode=0644
+  ignore_errors: true
+
+
+- name: Configure Nginx xhprof.conf
+  template: src=etc/nginx/conf.d/xhprof.conf dest=/etc/nginx/conf.d/xhprof.conf owner=root group=root mode=0644
+  notify: nginx reload
+  ignore_errors: true
+
+
+- name: enable and restart php-fpm
+  service:
+    name: "{{php5_fpm_service_name}}"
+    state: restarted
+    enabled: true
+

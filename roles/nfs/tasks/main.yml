@@ -1,0 +1,126 @@
+---
+- name: Install the nfs and additional packages (apt)
+  apt: "name={{ item }} state={{installed_package_state}}"
+  tags:  install_packages
+  with_items:
+    - nfs-kernel-server
+    - nfs-common 
+    - 
+    #- system-config-samba #not avial on debian
+  when: "ansible_pkg_mgr=='apt'"
+
+- name: Install the nfs and additional packages (yum)
+  yum: "name={{ item }} state={{installed_package_state}}"
+  tags:  install_packages
+  with_items:
+    - nfs-utils
+    # - nfs-utils-lib
+    - portmap
+  when: "ansible_pkg_mgr=='yum'"
+
+- name: ensure /etc/exports exists
+  tags: [ 'always' ]
+  shell: "touch /etc/exports"
+
+#- debug: msg="{{nfs_shares}}"
+#
+#- name: ensure nfs share dirs exists
+#  tags: [ 'always' ]
+#  debug: msg="{{item}}"
+#  with_items:
+#     "{{nfs_shares}}"
+#  when: nfs_shares is defined and nfs_shares[0] is defined
+#
+#- name: ensure nfs share dirs exists
+#  tags: [ 'always' ]
+#  debug: msg="{{item.path}}"
+#  with_items:
+#     "{{nfs_shares}}"
+#  when: nfs_shares is defined and nfs_shares[0] is defined
+
+- name: ensure nfs share dirs exists
+  tags: [ 'always' ]
+  file:
+      path: "{{item.path}}"
+      state: directory
+      recurse: yes
+  with_items:
+     "{{nfs_shares}}"
+  when: nfs_shares is defined and nfs_shares[0] is defined
+
+- name: ensure nfs share dirs exists and are owned correctly
+  tags: [ 'always' ]
+  file:
+      path: "{{item.path}}"
+      state: directory
+      owner: "{{item.owner}}"
+      group: "{{item.group}}"
+      recurse: yes
+  with_items:
+     "{{nfs_shares}}"
+  when: nfs_shares is defined and nfs_shares[0] is defined
+  ignore_errors: yes #in case some user of group does not exist
+
+- name: remove previous nfs share for item if any
+  tags: [ 'always' ]
+  lineinfile:
+      dest: /etc/exports
+      create: true
+      state: absent
+      regexp: "{{item.path}}"
+  with_items:
+     "{{nfs_shares}}"
+  when: nfs_shares is defined and nfs_shares[0] is defined
+
+- name: add nfs share for item
+  tags: [ 'always' ]
+  lineinfile:
+      dest: /etc/exports
+      create: true
+      state: present
+      line: "{{item.path}} {{item.clients}}({{item.rights}})"
+  with_items:
+     "{{nfs_shares}}"
+  when: nfs_shares is defined and nfs_shares[0] is defined
+
+- name: restart and enable nfs services
+  tags: [ 'always' ]
+  service: name={{item}} state=restarted enabled=yes
+  with_items:
+      - rpcbind
+      - "{{nfs_service_name}}"
+  ignore_errors: true
+
+- name: ensure statd is running - rpcbind needs reboot on centos to start
+  tags: [ 'always' ]
+  shell: "rpc.statd"
+  ignore_errors: true
+
+- name: reload nfs shares
+  tags: [ 'always' ]
+  shell: "exportfs -rv;showmount -e 127.0.0.1;"
+  ignore_errors: true
+
+- name: open firewall
+  tags: [ 'always' ]
+  shell: "firewall-cmd --permanent --zone=public --add-service={{item}} "
+  with_items:
+   - nfs
+   - mountd
+   - rpc-bind
+   - portmapper
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  ignore_errors: true
+
+- name: open firewall
+  tags: [ 'always' ]
+  shell: "firewall-cmd --permanent --zone=public --add-port={{item}}"
+  with_items:
+   - "111/tcp"
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  ignore_errors: false
+
+- command: /bin/true
+  tags: [ 'always' ]
+  notify: firewalld reload
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6

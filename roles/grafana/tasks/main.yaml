@@ -1,0 +1,77 @@
+---
+
+- name: Test distribution
+  assert:
+    that: ansible_os_family == "RedHat"
+
+- name: install graphana repo
+  yum_repository:
+    name: grafana
+    description: Grafana YUM repo
+    baseurl: https://packagecloud.io/grafana/stable/el/{{ansible_distribution_major_version|int}}/$basearch
+    gpgcheck: 0
+  tags:
+    - grafana_pkg
+    - install_packages
+
+- name: Install Grafana package for RedHat
+  yum:
+    name: "{{ grafana_pkg }}"
+    state: latest
+  notify:
+    - Restart grafana
+  tags:
+    - grafana_pkg
+    - install_packages
+
+- name: Configure Grafana
+  template:
+    src: grafana.ini
+    dest: /etc/grafana/grafana.ini
+  notify:
+    - Restart grafana
+  tags:
+    - grafana_config
+
+- name: Check if the binary can bind to TCP port <1024
+  shell: getcap /usr/sbin/grafana-server | grep cap_net_bind_service
+  register: grafana_bind_cap
+  failed_when: False
+  changed_when: False
+  when: grafana_allow_low_port
+  tags:
+    - grafana_config
+
+- name: Set capability on the binary file to be able to bind to TCP port <1024
+  shell: setcap 'cap_net_bind_service=+ep' /usr/sbin/grafana-server
+  when: grafana_allow_low_port and grafana_bind_cap.rc > 0
+  notify:
+    - Restart grafana
+  tags:
+    - grafana_config
+
+  #unless vhost.conf is the first file to be picked up alphabetically bu ngix, we get forbidden when doing proxy-pass
+- name: make config for nginx
+  template: src=nginx-grafana.conf
+            dest=/etc/nginx/conf.d/00-grafana.conf
+            owner={{web_user}}
+            mode=0644
+  notify:
+    - nginx restart
+
+
+
+- name: install plugins
+  shell: "{{item}}"
+  with_items:
+    - "grafana-cli plugins install percona-percona-app"
+    - "grafana-cli plugins install mtanda-histogram-panel"
+    - "grafana-cli plugins install grafana-simple-json-datasource"
+
+
+- name: Make sure grafana service is enabled and running
+  service:
+    name: grafana-server
+    enabled: yes
+    state: restarted
+  ignore_errors: yes

@@ -1,0 +1,75 @@
+---
+- name: mysql restart
+  service: name={{mysql_service}} state=restarted enabled=yes
+  async: 10
+  poll: 2
+  ignore_errors: true #mysql start hangs on rhel7 even is service startedrpm -ivh mysql-community-release-el7-5.noarch.rpm
+  
+- name: mysql start
+  service: name={{mysql_service}} state=started
+  async: 10
+  poll: 2
+  ignore_errors: true #mysql start hangs on rhel7 even is service startedrpm -ivh mysql-community-release-el7-5.noarch.rpm
+  
+- name: mysql reload
+  service: name={{mysql_service}} state=reloaded 
+  async: 10
+  poll: 2
+  ignore_errors: true #mysql start hangs on rhel7 even is service startedrpm -ivh mysql-community-release-el7-5.noarch.rpm
+  
+# ####
+- name: update-rc mysql
+  command: update-rc.d mysql defaults
+  ignore_errors: yes
+
+- name: nginx reload
+  service: name=nginx state=reloaded
+  ignore_errors: yes
+
+- name: nginx restart
+  service: name=nginx state=restarted enabled=yes
+  ignore_errors: yes
+
+- name: update-rc nginx
+  command: update-rc.d nginx defaults
+  ignore_errors: yes
+  
+- name: restart ssh
+  sudo: yes
+  service:
+    name: "{{ssh_service_name}}"
+    enabled: yes
+    state: restarted
+
+- name: firewalld reload 
+  shell: "firewall-cmd --reload"
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  ignore_errors: yes
+  
+- name: firewalld reload 
+  service: "name=firewalld state=started enabled=true"
+  ignore_errors: true
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+
+- name: firewalld reload 
+  service: "name=firewalld state=stopped enabled=false"
+  ignore_errors: true
+  when: firewall_state=='disabled' and (ansible_distribution_major_version|int) > 6
+  
+- name: firewalld reload 
+  shell: "systemctl stop firewalld"
+  ignore_errors: true
+  when: firewall_state=='disabled' and (ansible_distribution_major_version|int) > 6
+
+- name: ensure inventory_hostname is resolvable
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="127.0.0.1 {{item}}" state=present
+#  when: "'.' not in inventory_hostname" #means it is probably not dns resolvable
+  with_items:
+    - "{{inventory_hostname}}"
+
+- name: ensure keys for cluster nodes are added to /root/.ssh/known_hosts
+  shell:  "ssh-keyscan -H {{item}} >> /root/.ssh/known_hosts"
+  with_items:
+    "{{cluster_ip_addrs_list}}"
+  tags:
+    - always

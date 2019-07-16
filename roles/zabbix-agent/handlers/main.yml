@@ -1,0 +1,7 @@
+---
+# handlers file for zabbix-agent
+
+- name: zabbix-agent restarted
+  shell: systemctl reset-failed {{ zabbix_agent_service }}; systemctl enable {{ zabbix_agent_service }};systemctl restart {{ zabbix_agent_service }};systemctl status {{ zabbix_agent_service }};
+  become: yes
+  ignore_errors: true

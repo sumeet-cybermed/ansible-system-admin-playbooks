@@ -1,0 +1,13 @@
+
+# - name: Install mysql repo. (yum)
+  # yum:
+    # name: "{{ yum_mysql_repo_url }}"
+    # state: present
+  # when: "db_type=='mysql' and (db_variant=='mysql')"
+  
+# - name: Import mysql GPG key. (yum)
+  # rpm_key:
+    # key: "{{ yum_mysql_repo_gpg_key_url }}"
+    # state: present
+  # when: "db_type=='mysql' and (db_variant=='mysql')"    
+  

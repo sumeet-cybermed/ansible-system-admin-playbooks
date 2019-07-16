@@ -1,0 +1,92 @@
+---
+  
+- name: remove no longer used PHP packages (yum)
+  yum: "name={{ item }} state=absent"
+  tags:  install_packages
+  with_items:
+       - php5*-memcache
+       - php5*-memcached
+       - php5*-xcache
+       - xcache-admin
+       - php5*-pecl-apcu
+       - memcached
+       # - php5*
+  ignore_errors: true
+
+
+- name: Install remi repo. (yum)
+  tags:  install_packages
+  yum:
+    name: "{{ yum_remi_repo_url }}"
+    state: present
+  when: is_initial_run is defined
+  async: 30
+  poll: 3
+  ignore_errors: true #timeout is common
+  
+- name: Import remi GPG key. (yum)
+  tags:  install_packages
+  rpm_key:
+    key: "{{ yum_remi_repo_gpg_key_url }}"
+    state: present
+    validate_certs: no
+  when: is_initial_run is defined
+  ignore_errors: true  
+  
+- name: Install PHP packages (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}} enablerepo=remi,remi-php55,remi-php56"
+  with_items:
+      - php{{php5_major_version}}
+      - php-curl
+      - php-gd
+      - php-mysql
+      - php-fpm
+      - php-xdebug
+      - php-devel
+      - php-openssl
+      - libyaml
+        # we use zend opcodecache [backported fromphp7 to php5.x] plus redis - no need for xcache or apcu
+      - php-pecl-redis
+      - php-mysqlnd
+  when: is_initial_run is defined
+
+- name: Install PHP package mysqlnd (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}} enablerepo=remi,remi-php55,remi-php56"
+  with_items:
+      - php-pecl-mysqlnd-ms
+  when: is_initial_run is defined and install_mysqlnd_ms
+
+- name: remove PHP package mysqlnd (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state=absent"
+  with_items:
+      - php-pecl-mysqlnd-ms
+  when: not install_mysqlnd_ms
+
+- name: Install Sometimes Missing PHP packages (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}}   enablerepo=remi,remi-php55,remi-php56"
+  with_items:
+      - php-ldap
+      - php-cli
+      - php-pecl-zendopcache
+      - php-pear
+      - php-json
+      - php-mbstring
+      - libyaml-devel
+  ignore_errors: yes
+
+- name: Install PHP packages for < 56 (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}}   enablerepo=remi,remi-php55,remi-php56"
+  with_items:
+        - php-apc
+  when: php5_major_version|int < 56
+
+
+- name: set log permissions (needed for centos for pml to work)
+  command: mkdir -p /var/log/php{{php5_major_version}}-fpm/; chown -R {{ web_user }}:{{ web_group }} /var/log/php{{php5_major_version}}-fpm/
+  ignore_errors: true
+

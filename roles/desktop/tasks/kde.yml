@@ -1,0 +1,22 @@
+# ---
+# - name: Install percona server (apt)
+  # apt: name={{ item}} state={{installed_package_state}} force=yes
+  # notify:
+    # - update-rc mysql
+    # - mysql restart
+  # # tags:  [ 'mysql', 'database' ]
+  # with_items:
+    # - percona-server-server-5.6
+    # # - percona-server-client-5.6
+    # - python-mysqldb
+  # when: "ansible_pkg_mgr == 'apt'"
+  
+# - name: Install percona server (yum)
+  # action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  # tags:  install_packages
+  # when: "ansible_pkg_mgr == 'yum'"
+  # with_items:
+    # - percona-server-server-5.6
+    # # - percona-server-client-5.6    
+    # - MySQL-python
+    

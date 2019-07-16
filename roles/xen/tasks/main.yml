@@ -1,0 +1,139 @@
+---
+- name: install xen packages (apt)
+  apt: name={{item}} state={{installed_package_state}}
+  with_items:
+    - xen-linux-system-amd64
+    - xen-tools
+    - bridge-utils
+    # - xen-qemu-dm
+  when: ansible_pkg_mgr=='apt'
+
+- name: install xen packages (yum)
+  yum: name={{item}} state={{installed_package_state}}
+  tags:  install_packages
+  with_items:
+    - xen-linux-system
+    - xen-tools
+  when: ansible_pkg_mgr=='yum'
+  
+- name: prioritize booting xen hypervisor
+  shell: "dpkg-divert --divert /etc/grub.d/08_linux_xen --rename /etc/grub.d/20_linux_xen;update-grub"
+  when: ansible_pkg_mgr=='apt' and make_xen_default_kernel is defined and make_xen_default_kernel
+ 
+- name: Tune Dom0 memory and cpu
+  lineinfile:
+    dest: /etc/default/grub
+    line: GRUB_CMDLINE_XEN="dom0_mem=4096M dom0_max_vcpus=2 dom0_vcpus_pin"
+    backup: true 
+    state: "{item}"
+  with_items:
+    - absent
+    - present
+
+- name: update grub
+  shell: update-grub
+
+- name: Set default values for xl.
+  template:
+    src: etc/xen/xl.conf
+    dest: /etc/xen/xl.conf
+    backup: true
+
+#When rebooting dom0 Xen saves the current status of domU in a special file and start again exactly from this status. The lines above will prevent this and force domU to shutdown normally. 
+- name: Set default values Xen Domains Restore 
+  lineinfile:
+    dest: "/etc/default/xendomains"
+    regexp: "{{item.regex}}"
+    line: "{{item.line}}"
+    create: true
+  with_items:
+    - {regex: 'XENDOMAINS_RESTORE=', line: 'XENDOMAINS_RESTORE=false' }
+    - {regex: 'XENDOMAINS_SAVE=', line: 'XENDOMAINS_SAVE=' }
+  
+#Set the right default toolstack in "/etc/default/xen":   
+- name: Set default values Xen Domains Restore 
+  lineinfile:
+    dest: "/etc/default/xen"
+    regexp: "{{item.regex}}"
+    line: "{{item.line}}"
+    create: true
+  with_items:
+    - {regex: 'TOOLSTACK=', line: 'TOOLSTACK=xl' }
+     
+#The parameters in "/etc/xen-tools/xen-tools.conf" sets a lot of default values for creating new domU by using command $ xen-create-image.      
+- name: Set default values for xen-create-image.
+  template:
+    src: etc/xen-tools/xen-tools.conf
+    dest: /etc/xen-tools/xen-tools.conf
+    backup: true
+    
+##########################    
+### xen networking -  from: http://wiki.kartbuilding.net/index.php/Xen_Networking#Bridge_Networking
+- name: set up xen bridge network/interfaces
+  template:
+    src: etc/xen/xend-config.sxp
+    dest: /etc/xen/xend-config.sxp
+    backup: true
+    
+- name: set up xen bridge network/interfaces - 2
+  template:
+    src: etc/xen/auto/vm01.cfg
+    dest: /etc/xen/auto/vm01.cfg
+    backup: true    
+    
+    # Configure /etc/network/interfaces on the VM itself 
+
+# mount /srv/xen/vm01-disk.img /mnt
+# vi /mnt/etc/network/interfaces
+# auto eth0
+# iface eth0 inet static
+# address 192.168.0.6
+# gateway 192.168.0.1
+# netmask 255.255.255.0
+##########################
+
+# xm create /etc/xen/vm01.cfg
+# xm console vm01
+
+      
+##########################    
+### xen networking -  from: https://wiki.ifeelaffinity.com/index.php?title=Xen_Networking
+
+ 
+# - name: Set up networking 1 - sysctl.conf
+  # template:
+    # src: etc/sysctl.conf
+    # dest: /etc/sysctl.conf
+    # backup: true 
+
+# - name: Set up networking 1 - sysctl.conf apply changes
+  # shell: sysctl -p
+
+# - name: Set up networking 2 - create a bridge
+  # shell: brctl addbr xenbr0
+
+# - name: Set up networking 3 - configure xenbr0
+  # template:
+    # src: etc/network/interfaces.d/xenbr0.cfg
+    # dest: /etc/network/interfaces.d/xenbr0.cfg
+    # backup: true  
+
+# - name: Set up networking 4 - /etc/xen/conf.d
+  # lineinfile:
+    # dest: /etc/xen/conf.d
+    # line: "vif = [ 'ip=10.0.0.XX,mac=00:16:3E:XX:XX:XX,vifname=vifNAME,bridge=xenbr0,script=vif-bridge' ]"
+    # create: true
+    # backup: true 
+    # state: "{item}"
+  # with_items:
+    # - absent
+    # - present
+  
+# # Set the right configuration in "/etc/network/interfaces" on your domU:
+# # auto eth0
+# # iface eth0 inet static
+        # # address 10.0.0.XX
+        # # gateway 10.0.0.1
+        # # netmask 255.255.255.0
+        # # broadcast 10.0.0.255
+##########################    

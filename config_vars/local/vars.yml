@@ -1,0 +1,28 @@
+---
+#
+##
+firewall_state: disabled
+selinux_state: disabled
+nginx_listen_port: 80
+nginx_secure_listen_port: 443
+
+
+#modify nginx domains for relay from public ip
+webapp_hhvm_domains:
+    - "hhvm.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+    - "hhvm.{{webapp}}.{{external_ip_address}}"
+    - "hhvm.{{webapp}}.{{ansible_hostname}}"
+
+webapp_php_domains:
+    - "default"
+    - "{{webapp}}.{{lb.external_loadbalanced_ip}}"
+    - "php5.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+    - "{{webapp}}.{{external_ip_address}}"
+    - "php5.{{webapp}}.{{external_ip_address}}"
+    - "{{webapp}}.{{ansible_hostname}}"
+    - "php5.{{webapp}}.{{ansible_hostname}}"
+
+webapp_php7_domains:
+    - "php7.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+    - "php7.{{webapp}}.{{external_ip_address}}"
+    - "php7.{{webapp}}.{{ansible_hostname}}"

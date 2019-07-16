@@ -1,0 +1,27 @@
+---
+- name: Run YUM Specific Tasks 
+  include: yum.yml
+  when: "ansible_pkg_mgr=='yum'"
+  tags: ['always']
+  
+- name: Run APT Specific Tasks 
+  include: apt.yml
+  when: "ansible_pkg_mgr=='apt'"
+  tags: ['always']
+  
+# - name: ensure /etc/mysql
+  # file: path=/etc/mysql state=directory owner=root group=root mode=0755
+  # # tags: ['always']
+
+# - name: ensure /etc/my.cnf ...
+  # template: src=etc/mysql/my.cnf dest=/etc/my.cnf owner=root group=root mode=0644
+  # notify:
+    # - mysql restart
+    
+# - name: ensure /etc/my.cnf is deleted
+  # file: path=/etc/my.cnf state=absent
+  # # tags:  [ 'mysql', 'database' ]
+
+# - name: Ensure /etc/mysql/conf.d/ directory exists #needed on centos!
+  # file: path="/etc/mysql/conf.d/" state=directory owner=root group=root mode=0755
+  # when: "ansible_pkg_mgr == 'yum'"

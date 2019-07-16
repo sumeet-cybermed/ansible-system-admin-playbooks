@@ -1,0 +1,56 @@
+---
+# - name: Ensure /var/log/mysql/ directory exists #needed on centos!
+  # file: path=/var/log/mysql/ state=directory owner=mysql group=mysql mode=0775
+
+# - name: Ensure /var/run/mysqld/ directory exists #needed on centos!
+  # file: path=/var/run/mysqld/ state=directory owner=mysql group=mysql mode=0775
+
+# - name: ensure /var/run/mysqld/ directory is created at each boot!
+  # lineinfile: 
+    # dest: "{{user_system_scripts_directory}}/01_run_on_boot.sh"
+    # line: "mkdir -p /var/run/mysqld/; chown mysql:mysql /var/run/mysqld/; service mysql start;"
+    # state: present
+    # create: true
+  # when: mariadb_service_exists is defined and mariadb_service_exists.stat.exists    
+  
+# - name: enable autostart of mysql (using service module)
+  # service: name={{mysql_service}} enabled=true pattern="[  OK  ]"
+  # sudo: yes
+  # async: 5
+  # poll: 2
+  # ignore_errors: yes #sometimes takes time to start - or on centos, restart command hangs indefinitely
+  
+# - name: restart mysql (via shell as centos with mariadb fails sometimes)
+  # shell: service mysql restart
+  # sudo: yes
+  # async: 5
+  # poll: 2
+  # ignore_errors: yes #sometimes takes time to start - or on centos, restart command hangs indefinitely  
+  
+# - name: wait for mysql to start
+  # wait_for: 
+    # port:  "{{db.mysql_listen_port}}"
+    # host: "{{ ansible_ssh_host | default(inventory_hostname) }}"
+    # state: started
+    # delay: 1
+    # timeout: 15
+  # ignore_errors: yes #sometimes takes time to start - or on centos, restart command hangs indefinitely
+
+# - name: Grant root user access
+  # mysql_user:
+    # name: root
+    # append_privs: yes
+    # priv: "*.*:ALL"
+    # host: "{{ item }}" 
+    # password: ""
+    # state: present
+    # login_user: "{{ mysql_root_user }}"
+    # login_password: "{{ mysql_root_secure_password }}"
+    # login_port: "{{db.mysql_listen_port}}"
+  # with_items:
+   # - localhost
+   # - 127.0.0.1
+   # - "%"
+   # # - ::1
+  # sudo: yes
+  # ignore_errors: no #sometimes takes time to start - or on centos, restart command hangs indefinitely

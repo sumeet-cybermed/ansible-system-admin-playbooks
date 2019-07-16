@@ -1,0 +1,21 @@
+
+### guest additions
+- name: check if vb hardware is present
+  tags: [ 'always' ]
+  shell: lspci | grep VirtualBox
+  register: vb_hardware_present
+  ignore_errors: true
+
+- debug: var=vb_hardware_present  
+
+    
+# http://dev.mysql.com/doc/refman/5.7/en/linux-installation-rpm.html    
+- name: Install mysql-server commercial (yum)
+  shell: "cd /var/downloads/mysql-commercial; yum install -y -t {{ item }}"
+  # tags:  [ 'mysql', 'database' ]
+  with_items:
+    - "mysql-commercial-{server,client,common,libs,devel,test}-*"
+    - "mysql-connector-python-commercial-*"
+    - "mysql-{utilities,workbench}-commercial-*"
+  when: "ansible_pkg_mgr == 'yum' and db_license == 'commercial'"
+  ignore_errors: true

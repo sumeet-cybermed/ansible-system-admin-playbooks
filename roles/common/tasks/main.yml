@@ -1,0 +1,85 @@
+---
+- name: Install necessary packages for proper system state (apt)
+  action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  tags:  install_packages
+  with_items:
+    - ack-grep
+    - htop
+    - iotop 
+    - iftop 
+    - screen 
+    - psmisc
+    - sysv-rc-conf
+    - python-pycurl
+    - gcc
+    - git
+    - curl
+    - unzip
+    - traceroute
+    - subversion
+    - autojump
+    - siege
+    - python-apt
+    - python-mysqldb
+    - build-essential 
+    - g++
+    - mercurial
+    - telnet
+    - pkg-config
+    - python-passlib
+  when: "ansible_pkg_mgr == 'apt'"
+
+- name: Install necessary packages for proper system state (yum)
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}} "
+  with_items:
+    - redhat-lsb-core
+    - yum-utils
+    - ack
+    - htop
+    - iotop 
+    - iftop 
+    - screen 
+    - psmisc
+    - net-tools #for netstat,
+    - wget
+    - python-pycurl
+    - gcc
+    - git
+    - curl
+    - unzip
+    - traceroute
+    - subversion
+    - autojump
+    - siege
+    - MySQL-python
+    - gcc-c++
+    - mercurial
+    - telnet
+    - python-passlib
+    # - pkg-config    
+  when: "ansible_pkg_mgr == 'yum'"
+  ignore_errors: true #gives error on rhel7 even if all packagesd already installed!
+  
+- name: configure git
+  shell: "true;
+        mkdir -p /root/.git;
+        touch /root/.git/config;
+        git config --global core.autocrlf false;
+        git config --global core.safecrlf false;
+        git config --global color.ui true;
+        git config --global core.compression 7;
+        git config --global branch.autosetuprebase always;
+        git config --global http.postBuffer 524288000;
+        git config --system pack.threads 4;
+        git config --global credential.helper 'cache --timeout 720000';
+        git config --global credential.helper store;
+        git config credential.helper store | true;
+        "
+  ignore_errors: true
+
+- include: swap.yml
+  tags: ['always']
+
+- include: daemonize.yml
+  tags: ['always']

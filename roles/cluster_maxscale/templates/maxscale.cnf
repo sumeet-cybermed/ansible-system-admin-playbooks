@@ -1,0 +1,94 @@
+[maxscale]
+threads=8
+log_warning=1
+log_debug=0
+log_info=0
+
+
+[Galera Moni1tor]
+type=monitor
+module=galeramon
+servers={% for node in groups['cluster'] %}{{ hostvars[node]["ansible_hostname"] }}{% if not loop.last %},{% endif %}{% endfor %}
+
+user={{db.lb_username}}
+passwd={{db.lb_pass}}
+monitor_interval=5000
+
+[Read Connection Router]
+type=service
+router=readconnroute
+servers={% for node in groups['cluster'] %}{{ hostvars[node]["ansible_hostname"] }}{% if not loop.last %},{% endif %}{% endfor %}
+
+user={{db.lb_username}}
+passwd={{db.lb_pass}}
+router_options=slave
+enable_root_user=true
+localhost_match_wildcard_host=1
+
+
+[Splitter Service]
+type=service
+router=readwritesplit
+servers={% for node in groups['cluster'] %}{{ hostvars[node]["ansible_hostname"] }}{% if not loop.last %},{% endif %}{% endfor %}
+
+user={{db.lb_username}}
+passwd={{db.lb_pass}}
+max_slave_connections=100%
+router_options=slave_selection_criteria=LEAST_CURRENT_OPERATIONS
+enable_root_user=true
+localhost_match_wildcard_host=1
+
+
+[Debug Interface]
+type=service
+router=debugcli
+enable_root_user=true
+localhost_match_wildcard_host=1
+
+
+[CLI]
+type=service
+router=cli
+enable_root_user=true
+localhost_match_wildcard_host=1
+
+[Read Connection Listener]
+type=listener
+service=Read Connection Router
+protocol=MySQLClient
+#address={{ lb.external_loadbalanced_ip }}
+port={{db.lb_read_all_nodes_listen_port}}
+#socket=/tmp/readconn.sock
+
+[Splitter Listener]
+type=listener
+service=Splitter Service
+protocol=MySQLClient
+#address={{ lb.external_loadbalanced_ip }}
+port={{db.lb_rw_split_listen_port}}
+
+[Debug Listener]
+type=listener
+service=Debug Interface
+protocol=telnetd
+#address={{ lb.external_loadbalanced_ip }}
+port=4442
+
+[CLI Listener]
+type=listener
+service=CLI
+protocol=maxscaled
+#address={{ lb.external_loadbalanced_ip }}
+port=6603
+
+{% for node in groups['cluster'] %}
+
+[{{hostvars[node]["ansible_hostname"]}}]
+type=server
+address={{hostvars[node][lb.internal_eth_name]["ipv4"]["address"]}}
+port={{db.mysql_listen_port}}
+protocol=MySQLBackend
+log_auth_warnings=true
+strip_db_esc=true
+
+{% endfor %}

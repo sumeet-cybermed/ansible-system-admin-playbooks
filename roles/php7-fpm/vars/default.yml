@@ -1,0 +1,4 @@
+# cannot be in tmp does not work - dir must be owned by web_user/web_group
+opcache_file_cache_path: "{{opcache_file_cache_path_base}}/{{php7_major_version}}"
+php_error_log: "/var/log/nginx/php{{php7_major_version}}_errors.log"
+php_fpm_listen: "/var/run/php{{php7_major_version}}-fpm.sock"

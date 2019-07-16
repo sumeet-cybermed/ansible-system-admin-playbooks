@@ -1,0 +1,37 @@
+# By default, do not allow recursion, which is suitable for an authoritative
+# name server. (set to "yes" for an caching DNS server).
+bind_recursion: "no"
+
+# SOA information
+bind_zone_hostmaster_email: "admin"
+bind_zone_ttl: "1W"
+bind_zone_time_to_refresh: "1D"
+bind_zone_time_to_retry: "1H"
+bind_zone_time_to_expire: "1W"
+bind_zone_minimum_ttl: "1D"
+
+bind_listen_ipv4:
+  - 'any'
+bind_listen_ipv6:
+  - 'any'
+bind_allow_query:
+  - '172.16.70.0/24'
+  - '127.0.0.0/8'
+
+bind_zone_name: 'cxlm.ramsaysimedarbyhealth.com'
+bind_zone_networks:
+  - '172.16.70'
+
+bind_zone_master_server_ip: '172.16.70.189'
+bind_zone_name_servers:
+  - 'testbindmaster'
+  - 'testbindslave'
+bind_zone_mail_servers:
+  - name: 'mail'
+    preference: '10'
+bind_zone_hosts:
+  - name: 'test'
+    ip: '172.16.70.189'
+    aliases:
+      - ns1
+ 

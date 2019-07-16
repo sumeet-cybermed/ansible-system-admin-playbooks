@@ -1,0 +1,12 @@
+---
+- name: clustercontrol_container restart
+  service: name={{cluster_control_docker_container_service_name}} state=restarted
+
+- name: clustercontrol_container start
+  service: name={{cluster_control_docker_container_service_name}} state=started
+
+
+- name: clustercontrol_container stop
+  service: name={{cluster_control_docker_container_service_name}} state=stopped
+
+

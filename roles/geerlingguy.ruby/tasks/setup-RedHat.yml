@@ -1,0 +1,8 @@
+---
+- name: Install ruby and rubygems.
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}}"
+  with_items:
+    - ruby
+    - "{{ ruby_rubygems_package_name }}"
+    - ruby-devel

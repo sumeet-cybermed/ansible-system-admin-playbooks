@@ -1,0 +1,17 @@
+---
+
+- name: Checking dir exists
+  tags: [ 'always' ]
+  stat:
+    path: "{{ item }}"
+  register: item_stat
+
+- name: Creating directory
+  tags: [ 'always' ]
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ mode }}"
+  when: not item_stat.stat.exists

@@ -1,0 +1,27 @@
+
+vaulted_dev_host_smb_user: cifs_server
+vaulted_dev_host_smb_user_password: 1.cms.skwin7x64{{site_salt}}
+#
+#keep to <=8 characters for password_hash('md5') to work
+vaulted_dev_userpassword: "cx1@CMS{{site_salt}}" 
+vaulted_admin_userpassword: "811@CMS{{site_salt}}"
+vaulted_http_auth_userpassword: "314@CMS{{site_salt}}"
+#
+vaulted_root_securepassword: "81@CMS{{site_salt}}"
+#
+vaulted_backup_userpassword: "bkUp2@CMS{{site_salt}}"
+vaulted_mail_admin_secure_password: "cxm@mail{{site_salt}}"
+vaulted_vagrant_securepassword: "101@CMS{{site_salt}}"
+vaulted_haproxy_securepassword: "23@CMS{{site_salt}}"
+#
+vaulted_mysql_root_default_password: 
+vaulted_mysql_root_secure_password: "mysql1@CMS{{site_salt}}"
+vaulted_mysql_repl_secure_password: "mysql22@CMS{{site_salt}}"
+vaulted_mysql_lb_secure_password: "mysql26@CMS{{site_salt}}"
+#
+vaulted_webapps_db_user_password: "6qR.webapp{{site_salt}}"
+vaulted_zabbix_adminuser_password: "kj78.zabbix{{site_salt}}"
+vaulted_redis_auth_password: "{{vaulted_http_auth_userpassword}}"
+
+vaulted_host_initial_default_root_password: "xrootx"
+

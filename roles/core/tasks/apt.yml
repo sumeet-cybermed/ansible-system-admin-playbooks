@@ -1,0 +1,42 @@
+---
+- name: Disable ufw   (apt) 
+  service: "name=ufw state=stopped enabled=false"
+  ignore_errors: true
+
+#prv to debian 8  
+- name: boot to runlevel 3 (/etc/inittab)
+  shell: sed -i 's/id:5:initdefault:/id:3:initdefault:/' /etc/inittab
+  ignore_errors: true
+  
+#debian 8 onwards    
+- name: boot to runlevel 3 (systemctl)
+  shell: systemctl set-default multi-user.target
+  ignore_errors: true
+  
+  #configure apt
+- name: configure apt timeout and retries
+  template:
+    src: etc/apt/apt.conf.d/99timeout
+    dest: /etc/apt/apt.conf.d/99timeout
+    owner: root
+    group: root
+    mode: 0755
+
+- name: fix apt errors if any (apt)
+  shell: apt-get -f -y install
+  ignore_errors: yes
+  # tags:  "essentials / apt" 
+  
+- name: kill all apt instances (apt)
+  shell: killall -9 {{ item}}
+  with_items:
+    - PackageKit
+  ignore_errors: yes
+  # tags:  "essentials / apt"    
+
+- name: remove PackageKit (apt)
+  apt: name={{item}} state=absent
+  with_items:
+    - PackageKit
+  # tags:  "essentials / apt"
+        

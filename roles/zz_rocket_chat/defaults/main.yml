@@ -1,0 +1,44 @@
+---
+# defaults/main.yml: Defaults for RocketChat.Ansible
+rocket_chat_automatic_upgrades: false
+rocket_chat_upgrade_backup: true
+rocket_chat_upgrade_backup_path: "{{ rocket_chat_application_path }}"
+rocket_chat_application_path: /var/lib/rocket.chat
+rocket_chat_version: latest
+rocket_chat_tarball_remote: https://rocket.chat/releases/{{ rocket_chat_version }}/download
+rocket_chat_tarball_sha256sum: 8b1f6c92eb4e68855d42974d1fe19ede22be520e88ca34fff80b32ec3dec4089
+rocket_chat_tarball_check_checksum: true
+rocket_chat_tarball_fetch_timeout: 100
+rocket_chat_tarball_validate_remote_cert: true
+rocket_chat_service_user: rocketchat
+rocket_chat_service_group: rocketchat
+rocket_chat_service_host: "{{ rocket_chat_server_url }}"
+rocket_chat_service_port: 3033 #changed to not conflict with grafana
+rocket_chat_node_10_40_path: /usr/local/n/versions/node/0.10.40/bin
+rocket_chat_original_npm: /usr/bin/npm
+
+# MongoDB settings
+rocket_chat_mongodb_packages: mongodb
+rocket_chat_include_mongodb: true
+rocket_chat_mongodb_keyserver: hkp://keyserver.ubuntu.com:80
+rocket_chat_mongodb_gpg_key: 7F0CEB10
+rocket_chat_mongodb_server: 127.0.0.1
+rocket_chat_mongodb_port: 27017
+rocket_chat_mongodb_config_template: mongod.conf
+
+# nginx settings
+#A boolean value that determines whether or not to deploy Nginx
+rocket_chat_include_nginx: false
+#A boolean value that determines whether or not to deploy custom SSL data (cert/key files)
+rocket_chat_ssl_generate_certs: true
+rocket_chat_ssl_key_path: /etc/nginx/rocket_chat.key
+rocket_chat_ssl_cert_path: /etc/nginx/rocket_chat.crt
+rocket_chat_ssl_deploy_data: false
+rocket_chat_ssl_key_file: ~
+rocket_chat_ssl_cert_file: ~
+#A boolean value that determines whether or not to enable PFS when deploying Nginx
+rocket_chat_nginx_enable_pfs: true
+rocket_chat_nginx_generate_pfs_key: true
+rocket_chat_nginx_pfs_key_numbits: 2048
+rocket_chat_nginx_pfs_key_path: /etc/nginx/rocket_chat.pem
+rocket_chat_nginx_pfs_file: ~

@@ -1,0 +1,28 @@
+---
+
+- name: install openlitespeed repository
+  yum: name=http://rpms.litespeedtech.com/centos/litespeed-repo-1.1-1.el6.noarch.rpm state=latest
+
+- name: install latest stable openlitespeed
+  yum: name=openlitespeed state=latest
+
+- name: symlink php to openlitespeed php
+  action: command ln -sf /usr/bin/lsphp /usr/local/lsws/fcgi-bin/lsphp5
+
+- name: create vhost dir
+  file: path=/usr/local/lsws/vhost state=directory
+
+- name: chown to vhost dir to suexec user
+  action: command chown -R {{ web_user }}:{{ web_group }} /usr/local/lsws/vhost
+
+- name: backup old phpsuexec template
+  action: command mv /usr/local/lsws/conf/templates/phpsuexec.xml /usr/local/lsws/conf/templates/phpsuexec.xml.bak
+
+- name: copy my optimized phpsuexec template
+  template:
+    src=phpsuexec.xml.jowy
+    dest=/usr/local/lsws/conf/templates/phpsuexec.xml
+    owner=lsadm mode=0644
+
+- name: restart openlitespeed service
+  action: command /usr/local/lsws/bin/lswsctrl restart

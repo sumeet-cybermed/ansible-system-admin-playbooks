@@ -1,0 +1,37 @@
+- name: check if xenserver plugin has been installed
+  tags: [ 'always' ]
+  stat: path={{packer_home}}/packer-builder-xenserver-vm
+  register: xenserver_check_built
+  
+  
+- name: ensure dir exists
+  file: path={{go_path}}/src/github.com/xenserverarmy state=directory
+  when: packer_build_xenserver
+  
+  
+- name: clone xenserverarmy.git
+  git: "repo=git://github.com/xenserverarmy/packer.git dest={{go_path}}/src/github.com/xenserverarmy/packer update=no accept_hostkey=yes depth=1"
+  when: packer_build_xenserver
+    
+- name: clone and build the packer xenserver plugin
+  shell: "{{go_export_env}};cd {{go_path}}/src/github.com/xenserverarmy/packer;XC_OS='windows linux' XC_ARCH='386 amd64' ./build.sh ;"
+  when: packer_build_xenserver
+  
+  
+- name: copy xenserver builder to packer dir
+  shell:   cp -f {{go_path}}/bin/*xenserver* {{packer_home}}/
+  when: packer_build_xenserver
+ 
+
+- name: ensure dir exists
+  file: path={{packer_xs_templates_home}} state=directory
+      
+- name: clone xenserver/packer-templates
+  git: "repo=git://github.com/xenserver/packer-templates.git dest={{packer_xs_templates_home}} update=no accept_hostkey=yes depth=1"
+  
+- name: build xenserver boxes
+  shell: "cd {{packer_xs_templates_home}}; HOST='{{xenserver_host}}' USERNAME='{{xenserver_user}}' PASSWORD='{{xenserver_password}}' HTTP_PORT='{{xenserver_port}}' {{packer_home}}/packer build {{item}}"
+  with_items:
+    - "{{packer_build_xs_boxes}}"
+ 
+ 

@@ -1,0 +1,14 @@
+[Unit]
+Description=uWSGI Graphite
+After=syslog.target
+
+[Service]
+User={{ graphite_user }}
+ExecStart=/usr/bin/uwsgi --ini {{graphite_conf}}/uwsgi_default.ini --ini {{graphite_conf}}/uwsgi_graphite.ini
+KillSignal=SIGQUIT
+Type=notify  
+StandardError=syslog  
+NotifyAccess=main
+
+[Install]
+WantedBy=multi-user.target

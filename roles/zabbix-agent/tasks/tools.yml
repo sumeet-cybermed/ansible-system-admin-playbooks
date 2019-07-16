@@ -1,0 +1,41 @@
+---
+##ensure /etc/zabbix/zabbix_agentd.conf dir exists and is included in ajentd.conf
+- name: ensure ~zabbix directory exists [is home dior for user zabbix but not created when only zabbix agent is installed!]
+  file:
+    path: ~zabbix
+    state: directory
+    owner: zabbix
+    group: zabbix
+
+- name: Configure ~zabbix/.my.cnf for seamless mysql login
+  template: src=user_zabbix.my.cnf
+            dest=~zabbix/.my.cnf
+            owner=zabbix
+            group=zabbix
+            mode=0644
+
+- name: ensure /etc/zabbix/zabbix_agentd.d directory exists
+  file:
+    path: /etc/zabbix/zabbix_agentd.d
+    state: directory
+    owner: zabbix
+    group: zabbix
+
+- name: ensure /etc/zabbix/zabbix_agentd.d/ is included in /etc/zabbix_agentd.conf
+  lineinfile:
+    dest: /etc/zabbix/zabbix_agentd.conf
+    line: Include=/etc/zabbix/zabbix_agentd.d #do not append slash - causes double import and hence failure
+    state: present
+
+###### from_dual_mpm_plugins.yml #############
+- include: from_dual_mpm_plugins.yml
+  when: (install_zabbix_from_dual_mpm is defined and install_zabbix_from_dual_mpm and ansible_pkg_mgr=='yum')
+
+###### percona_monitoring_plugins.yml #############
+- include: percona_monitoring_plugins.yml
+  when: (install_zabbix_percona_monitoring_plugins is defined and install_zabbix_percona_monitoring_plugins and ansible_pkg_mgr=='yum')
+
+###### percona_monitoring_plugins.yml #############
+- include: cluster_control_plugins.yml
+  when: (install_zabbix_clustercontrol_monitoring_plugins is defined and install_zabbix_clustercontrol_monitoring_plugins and ansible_pkg_mgr=='yum')
+

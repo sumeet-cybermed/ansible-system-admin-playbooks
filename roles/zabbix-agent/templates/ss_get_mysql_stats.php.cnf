@@ -1,0 +1,6 @@
+<?php
+
+$mysql_user = 'root';
+$mysql_pass = '{{ db.root_pass}}';
+// $mysql_host='{{ db.mysql_listen_addr }}';
+// $mysql_port='{{ db.mysql_listen_port }}';

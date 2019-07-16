@@ -1,0 +1,12 @@
+---
+- name: rocket_chat_container restart
+  service: name={{rocket_chat_docker_container_service_name}} state=restarted
+
+- name: rocket_chat_container start
+  service: name={{rocket_chat_docker_container_service_name}} state=started
+
+
+- name: rocket_chat_container stop
+  service: name={{rocket_chat_docker_container_service_name}} state=stopped
+
+

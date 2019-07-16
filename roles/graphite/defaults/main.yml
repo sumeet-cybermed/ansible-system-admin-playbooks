@@ -1,0 +1,12 @@
+---
+# defaults file for ansible-graphite
+graphite_log_rendering_performance: no
+graphite_log_cache_performance: no
+graphite_log_metric_access: no
+graphite_timezone: UTC
+graphite_secret_key: "123hfkfhjgk;gkll;kl;jgjgk"
+graphite_user:       "{{web_user}}"
+
+# Optional extra options for uwsgi_graphite.ini
+uwsgi_graphite_extraopts: []
+uwsgi_graphite_socket: '127.0.0.1:3031'

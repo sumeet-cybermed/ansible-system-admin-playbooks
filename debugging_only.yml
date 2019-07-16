@@ -1,0 +1,65 @@
+- hosts: all
+  ### remote_user: vagrant
+  serial: "{{serial_var}}"
+  #allow 2 out of 3 to fail while downloading packages to shared host directory
+  max_fail_percentage: 1
+  sudo: yes  
+   
+  vars_files:
+    - "{{pb_app_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_config_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_site_vars_file}}" #parsed from extra args in config.yml
+
+
+  vars:
+    - is_initial_run: true
+
+  
+  roles:
+#    - handlers
+    - debugging
+#    - zabbix-server
+#    - zabbix-agent
+#    - nginx
+#     - {
+#
+#        role: cluster_control_docker,
+#        when: is_cluster_controller and install_cluster_control
+#      }
+#    - {
+#        role: upgrade_distrib,
+#        when: upgrade_distrib_to_latest is defined and upgrade_distrib_to_latest
+#      }
+    - docker
+#    - {
+#        role: mongo_db_docker,
+#        when: is_nfs_server #install on only one node
+#      }
+#    - {
+#        role: rocket_chat_docker,
+#        when: is_nfs_server #install on only one node
+#      }
+#
+#    - {
+#        role: cluster_haproxy,
+#        when: is_cluster and is_part_of_cluster
+#      }
+#    - {
+#        role: cluster_redis,
+#        when: true or is_cluster and is_part_of_cluster
+#     }
+#    - {
+#        role: zabbix-agent,
+#        when: True
+#      }
+#    - docker
+#    - {
+#            role: zabbix-agent,
+#            when: True
+#          }
+
+#    - cluster_db
+#    - nginx
+#    - php-fpm
+#    - backup
+   

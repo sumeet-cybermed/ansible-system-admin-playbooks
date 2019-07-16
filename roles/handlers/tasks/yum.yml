@@ -1,0 +1,11 @@
+
+- name: ensure selinux is running in permissive mode
+  tags: ['always']
+  shell: setenforce 0
+  when: selinux_state != 'enabled'
+  ignore_errors: true
+
+##NB: must also disable selinux and reboot before this process stops running!!!!
+- name: remove setroubleshoot* as we do not have a desktop and it can take up high cpu!!!
+  shell: yum -y remove setroubleshoot*
+  ignore_errors: false

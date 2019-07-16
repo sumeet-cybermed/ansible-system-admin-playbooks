@@ -1,0 +1,106 @@
+---
+- name: set sysctl vm.overcommit_memory=1 for redis to not fail in low memory situations
+  sysctl: name="vm.overcommit_memory=1" value=1 sysctl_set=yes state=present reload=yes
+
+- name: disable transparent huge pages now[on rhel 6+]
+  shell: "{{item}}"
+  with_items:
+    - "mkdir -p /sys/kernel/mm/transparent_hugepage"
+    - "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+    - "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
+
+#https://www.digitalocean.com/company/blog/transparent-huge-pages-and-alternative-memory-allocators/
+- name: disable transparent huge pages on boot [on rhel 6+]
+  lineinfile: dest=/etc/rc.local line="{{item}}" state=present create=false
+  with_items:
+    - "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+    - "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
+
+- name: create redis working directory
+  tags: always
+  file: path={{ redis_working_dir }} state=directory
+        recurse=yes
+        owner={{ redis_user }}
+
+- name: ensure pidfile directory exists and has correct owner
+  tags: always
+  file: path={{ redis_pidfile|dirname }}
+          owner={{ redis_user }}
+          state=directory
+          recurse=yes
+
+- name: ensure logfile directory exists and has correct owner
+  tags: always
+  file: path={{ redis_logfile|dirname }}
+        owner={{ redis_user }}
+        state=directory
+        recurse=yes
+  when: redis_logfile != '""'
+
+- name: ensure that log file exists and is writable by redis
+  tags: always
+  file: path={{ redis_logfile }}
+        owner={{ redis_user }}
+        group={{ redis_user }}
+        mode=0600
+        state=touch
+  ignore_errors: true
+
+- name: create redis config file
+  template: src=redis.conf dest={{ redis_conf_file }}
+  notify: restart redis
+
+- name: ensure redis is running
+  service: name={{redis_service_name}} state=restarted
+
+  # Flush handlers before ensuring the service is started to prevent
+  # a start and then restart
+- name: flush handlers to apply config changes
+  meta: flush_handlers
+
+- name: create sentinel working directory
+  tags: always
+  file: path={{ redis_sentinel_working_dir }} state=directory
+        recurse=yes
+        owner={{ redis_user }}
+
+- name: ensure sentinel logfile directory exists and has correct owner
+  tags: always
+  file: path={{ redis_sentinel_logfile|dirname }}
+        owner={{ redis_user }}
+        state=directory
+        recurse=yes
+  when: redis_logfile != '""'
+
+- name: ensure that log file exists and is writable by redis
+  tags: always
+  file: path={{ redis_sentinel_logfile }}
+        owner={{ redis_user }}
+        group={{ redis_user }}
+        mode=0600
+        state=touch
+  ignore_errors: true
+
+- name: create sentinel config file
+  template: src=redis_sentinel.conf
+            dest={{redis_setinel_conf_file}}
+            owner={{ redis_user }}
+  notify: restart sentinel
+
+- name: ensure sentinel is running
+  service: name={{redis_sentinel_service_name}} state=restarted
+
+# Flush handlers before ensuring the service is started to prevent
+# a start and then restart
+- name: flush handlers to apply config changes
+  meta: flush_handlers
+
+- name: test our Redis setup - PING
+  tags:  install_packages
+  shell: "redis-cli -h {{redis_listen_address}} -p {{redis_listen_port}} ping;"
+  ignore_errors: true
+
+- name: test our Redis setup - BENCHMARK
+  tags:  install_packages
+  shell: "redis-benchmark -q -n 1000 -c 10 -P 5 -h {{redis_listen_address}} -p {{redis_listen_port}}"
+  ignore_errors: true

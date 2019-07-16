@@ -1,0 +1,23 @@
+
+- name: extra phys nic configuration if required - vars
+  tags: ['always']
+  include_vars: add_lxc_nic_maps_phys.yml
+  when: mapped_nic_type == 'physical'
+  
+- name: extra phys nic configursation if required - tasks
+  tags: ['always']
+  include: add_lxc_nic_maps_phys.yml
+  when: mapped_nic_type == 'physical'
+  tags: ['always']
+  
+- name: extra bridged nic configuration if required - vars
+  tags: ['always']
+  include_vars: add_lxc_nic_maps_bridged.yml
+  when: mapped_nic_type == 'bridged'
+  
+- name: extra bridged nic configursation if required - tasks
+  tags: ['always']
+  include: add_lxc_nic_maps_bridged.yml
+  when: mapped_nic_type == 'bridged'
+  tags: ['always']
+  

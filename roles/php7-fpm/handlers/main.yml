@@ -1,0 +1,5 @@
+---
+
+- name: php7-fpm restart
+  command: service php{{php7_major_version}}-php-fpm restart
+  ignore_errors: no

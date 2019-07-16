@@ -1,0 +1,112 @@
+- name: "Provision {{ webapp }} WP Databases"
+  mysql_db: 
+    name: "wpe_{{ webapp }}"
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_secure_password }}"
+    login_port: "{{db.mysql_listen_port}}"
+    
+- name: "Grant {{ webapp }} WP users access to WP DBs"
+  mysql_user: 
+    name: "wpe_{{ webapp }}" 
+    priv: "wpe_{{ webapp }}.*:ALL" 
+    host: "{{ item }}" 
+    password: "{{ wordpress_db_user_password }}"
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_secure_password }}"
+    login_port: "{{db.mysql_listen_port}}"
+  with_items:
+   - localhost
+   - 127.0.0.1
+   - "%"
+   # - ::1
+
+- name: "Set up {{ webapp }} docroot"
+  file: path={{ www_root }}/{{ webapp }} state=directory owner={{ web_user }} group={{ web_group }}
+
+- name: "Download and install WordPress for {{ webapp }}"
+  command: /usr/local/bin/wp core download --path={{ www_root}}/{{ webapp }}
+  sudo: yes
+  sudo_user: "{{ web_user }}"
+  args:
+    creates: "{{ www_root }}/{{ webapp }}/license.txt"
+
+- name: Check whether {{ webapp }}/wp-config.php exists
+  tags: [ 'always' ]
+  stat:
+    path: "{{ www_root }}/{{ webapp }}/wp-config.php"
+  register: wpconfig
+
+- name: Check whether {{ webapp }}/wp-config.php is Ansible-managed
+  tags: [ 'always' ]
+  command: /bin/grep '^* Ansible managed' {{ www_root }}/{{ webapp }}/wp-config.php
+  register: wpansmgd
+  ignore_errors: yes
+  when: wpconfig.stat.exists
+
+- name: Fetch random salts for WordPress config
+  get_url:
+    dest: "{{ www_root }}/{{ webapp }}/wp-salts.php"
+    url: https://api.wordpress.org/secret-key/1.1/salt/
+
+- name: Make salts file a PHP file
+  lineinfile:
+    dest: "{{ www_root }}/{{ webapp }}/wp-salts.php"
+    insertbefore: BOF
+    line: <?php
+
+- name: "Create wp-config for {{ webapp }}"
+  template:
+    src: wp/wp-config.php
+    dest: "{{ www_root }}/{{ webapp }}/wp-config.php"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+  when: not wpconfig.stat.exists
+
+- name: "Create new wp-config for {{ webapp }} and save original"
+  template:
+    src: wp/wp-config.php
+    dest: "{{ www_root }}/{{ webapp }}/wp-config.php"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    backup: yes
+  when: wpconfig.stat.exists and wpansmgd|failed
+
+- name: "Localconfig for {{ webapp }}"
+  template: src=wp/local-config.php dest={{ www_root }}/{{ webapp }}/local-config.php owner={{ web_user }} group={{ web_group }}
+
+- name: "Object Cache for {{ webapp }}"
+  template: src=wp/object-cache.php dest={{ www_root }}/{{ webapp }}/wp-content/object-cache.php owner={{ web_user }} group={{ web_group }}
+
+- name: "Check whether the WP install has been run previously"
+  tags: [ 'always' ]
+  command: /usr/local/bin/wp core is-installed --path={{ www_root }}/{{ webapp }}
+  sudo: yes
+  sudo_user: "{{ web_user }}"
+  ignore_errors: yes
+  register: wpnotinstalled
+
+- name: "Run the WP install for {{ webapp }}"
+  command: /usr/local/bin/wp core install --url={{ domain }} --title="WP Engine {{ webapp }} Site" --admin_user=wordpress --admin_password=wordpress --admin_email="admin@example.com"
+  sudo: yes
+  sudo_user: "{{ web_user }}"
+  args:
+    chdir: "{{ www_root }}/{{ webapp }}"
+  when: wpnotinstalled.rc
+  
+- name: "Install some useful plugins for {{ webapp }}"
+  command: /usr/local/bin/wp plugin install {{ item }}
+  sudo: yes
+  sudo_user: "{{ web_user }}"
+  with_items:
+      - query-monitor
+      - debug-objects
+      - debug-queries
+      - debug-bar
+      - wordpress-importer
+  args:
+      chdir: "{{ www_root }}/{{ webapp }}"
+      creates: "{{ www_root }}/{{ webapp }}/wp-content/plugins/{{ item }}"
+  when: install_wordpress_plugins is defined and install_wordpress_plugins==true
+  

@@ -1,0 +1,15 @@
+,"{{ lb.internal_loadbalanced_ip }}": {
+    "master": {
+      "master_0": {
+        "host": "{{ lb.internal_loadbalanced_ip }}",
+        "port": "{{db.lb_rw_split_listen_port}}"
+      }
+    },
+    "slave": {
+      "slave_0": {
+        "host": "{{ lb.internal_loadbalanced_ip }}",
+        "port": "{{db.lb_read_all_nodes_listen_port}}"
+      }
+    }
+  }
+

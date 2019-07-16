@@ -1,0 +1,15 @@
+[Unit]
+Description=Run Custom User Scripts
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart={{user_system_scripts_directory}}/01_run_on_boot.sh
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+

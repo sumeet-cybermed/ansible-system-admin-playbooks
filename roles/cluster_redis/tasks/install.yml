@@ -1,0 +1,33 @@
+---
+
+#install redis from epel on yum on all nodes
+- name: Install EPEL repo. (yum)
+  tags:  install_packages
+  yum:
+    name: "{{ yum_epel_repo_url }}"
+    state: present
+  async: 30
+  poll: 3
+  ignore_errors: true #timeout is common
+  when: ansible_pkg_mgr=='yum'
+
+- name: Import EPEL GPG key (yum)
+  tags:  install_packages
+  rpm_key:
+    key: "{{ yum_epel_repo_gpg_key_url }}"
+    state: present
+    validate_certs: no
+  when: ansible_pkg_mgr=='yum'
+  ignore_errors: true
+
+- name: install redis from epel
+  tags:  install_packages
+  yum: "name={{ item }} state={{installed_package_state}} "
+  with_items:
+    - redis
+
+
+
+
+
+

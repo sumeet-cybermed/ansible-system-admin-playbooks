@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# sudo apt-get install realpath
+# sudo zypper install coreutils
+
+lOs=$(uname)
+
+if [ "$lOs" == 'Linux' ] ; then
+
+	# realpath does not exist or is not installed on all distributions
+	# (e.g. SLES)
+	# SLES behaves sligthly different than other distributions
+	REALPATH=$(which realpath 2>/dev/null)
+	ret=$?
+
+	if [ $ret -eq 0 ] ; then
+		lMyBase=$(dirname $(realpath $0))
+		lMyName=$(basename $(realpath $0))
+	else
+		lMyBase=$(dirname $(readlink -f $0))
+		lMyName=$(basename $(readlink -f $0))
+	fi
+elif [ "$lOs" == 'Darwin' ] ; then
+	lMyBase="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd )"
+	lMyName="$(basename "${BASH_SOURCE[0]}")"
+else
+	echo "Operating System $lOs is not supported."
+	exit 1
+fi
+
+$lMyBase/$lMyName.php "$@"

@@ -1,0 +1,10 @@
+---
+
+language: ruby
+sudo: required
+services:
+  - docker
+install:
+  - docker pull williamyeh/ansible:ubuntu16.04
+script:
+  - docker run -v $(pwd):/role williamyeh/ansible:ubuntu16.04 /role/tests/run.sh

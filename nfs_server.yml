@@ -1,0 +1,37 @@
+- name: set up common configuration
+  hosts: all
+  ### remote_user: vagrant
+  serial: "{{serial_var}}"
+  #allow 2 out of 3 to fail while downloading packages to shared host directory
+  max_fail_percentage: 1
+  sudo: yes  
+    
+  vars:
+  - is_initial_run: true
+
+  vars_files:
+    - "{{pb_app_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_config_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_site_vars_file}}" #parsed from extra args in config.yml
+
+  roles:
+    - {
+      role: upgrade_distrib,
+      when: upgrade_distrib_to_latest is defined and upgrade_distrib_to_latest
+    }
+    - handlers
+    - nfs
+    - htpasswd
+    # - docker
+    # - backup
+    # - zabbix-agent
+    # - {
+        # role: rocket_chat_docker,
+        # when: install_rocket_chat
+      # }
+#    - {
+#        role: prometheus,
+#        prometheus_components: [ "node_exporter", "mysqld_exporter" ],
+#        when: not is_server_monitor
+#      }
+

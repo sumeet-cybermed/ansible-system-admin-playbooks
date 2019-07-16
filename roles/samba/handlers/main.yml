@@ -1,0 +1,9 @@
+---
+ - name: Restart Samba
+   service: name={{ item }} state=restarted
+   with_items:
+      "{{ samba_service_names }}"
+   ignore_errors: true
+        
+  
+  

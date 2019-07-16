@@ -1,0 +1,25 @@
+---
+- include: webupd8_for_yum.yml
+  when: "ansible_pkg_mgr == 'yum'"
+  tags: ['always']
+  
+# - name: Accept Oracle License (yum)
+  # debconf: name={{ item }} question='shared/accepted-oracle-license-v1-1' value='true' vtype='select'
+  # with_items:
+    # - oracle-java6-installer
+    # - oracle-java7-installer
+    # - oracle-java8-installer
+  # when: java_needs_oracle
+  # tags: ['install_packages']
+  
+- name: Install Java packages (yum)
+  tags:  install_packages
+  yum: name={{ item }} state={{installed_package_state}}
+  with_items: java_packages
+  when: "ansible_pkg_mgr == 'yum'"  
+ 
+# - name: Remove unwanted Java packages (yum)
+  # apt: name={{ item }} state=absent
+  # with_items: java_packages_to_remove
+  # when: java_cleanup
+  # # tags:  [java]

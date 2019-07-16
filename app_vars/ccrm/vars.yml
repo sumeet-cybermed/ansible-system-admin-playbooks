@@ -1,0 +1,219 @@
+---
+# # set webapp_skip_git_clone: true to do the setup without re-cloning from zip
+webapp_skip_git_clone: false
+webapp_skip_db_import: false
+webapp_drop_database: false
+
+webapp_addcachedomain: 0
+  #we add date so we do not overwrite previous releases. also this way one has multiple vhosts with diff sites marked by date
+webapp_common_prefix: ccrm
+webapp: "{{webapp_common_prefix}}_{{ansible_date_time.day}}_{{ansible_date_time.month}}_{{ansible_date_time.year}}"
+webapp_desc: "CyberMed CRM {{ansible_date_time.day}}_{{ansible_date_time.month}}_{{ansible_date_time.year}}"
+
+#ssh clone fails behind rsdh firewall as outgoing port 22 is blocked
+# webapp_git_clone: "git@gitlab.com:CyberMedCRM/10-CCRM-Core.git"
+
+#for cluster deployment run non locally the git usernamer and password should first be cached locally on master node so that password prompt  doesnt hang in limbo!!
+webapp_git_clone: "https://gitlab.com/CyberMedCRM/10-CCRM-Core.git"
+webapp_git_branch_or_tag: "master"
+webapp_git_clone_host: gitlab.com
+webapp_git_key_file: /root/.ssh/id_rsa_rsdh
+webapp_git_relativepath: "/10-WebRoot"
+#
+webapp_copy_code_relativepath: ""
+
+#
+#allow long timeouts!!!
+webapp_max_input_time: 300
+webapp_request_timeout: 600
+
+# copy_source_from_host: True
+webapp_symlink_source_on_host: False
+#
+
+webapp_db_name: "{{webapp}}"
+webapp_db_host_name: "{% if is_cluster %}{{ lb.internal_loadbalanced_ip }}:{{db.lb_rw_split_listen_port}}{% else %}{{ lb.internal_bind_address }}:{{db.mysql_listen_port}}{% endif %}"
+webapp_db_user_name: "{{webapp_common_prefix}}"
+webapp_db_user_password: "{{webapps_default_db_user_password}}"
+webapp_db_super_access: True
+webapp_db_dump_file: /20-DBDumps/minimal_ccrm_dump.sql
+#
+webapp_writable_dirs:
+    - cache
+
+webapp_cron_interval: "*/60"
+webapp_cron_file: "{{www_root}}/{{webapp_common_prefix}}{{webapp_git_relativepath}}/_run_cron.sh"
+webapp_cron_log_file: "/var/log/cron_{{webapp_common_prefix}}.log"
+
+#
+webapp_frequent_cron_interval: "*/5"
+webapp_frequent_cron_file: "{{www_root}}/{{webapp_common_prefix}}{{webapp_git_relativepath}}/_run_frequent_jobs.sh"
+webapp_frequent_cron_log_file: "/var/log/cron_frequent_{{webapp_common_prefix}}.log"
+
+#
+webapp_quickrepair_file: "{{www_root}}/{{webapp_common_prefix}}{{webapp_git_relativepath}}/_quickrepair.sh"
+webapp_quickrepair_log_file: "/var/log/quickrepair_{{webapp_common_prefix}}.log"
+
+webapp_hhvm_domains:
+  - "hhvm.{{webapp}}.{{ansible_hostname}}"
+  - "hhvm.{{webapp}}.{{ansible_all_ipv4_addresses|last}}"
+  - "hhvm.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+
+webapp_php_domains:
+  - "php5.{{webapp}}.{{ansible_all_ipv4_addresses|last}}"
+  - "php5.{{webapp}}.{{ansible_hostname}}"
+  - "php5.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+
+webapp_php7_domains:
+  - "{{webapp}}.{{ansible_all_ipv4_addresses|last}}"
+  - "{{webapp}}.{{ansible_hostname}}"
+  - "php7.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+  - "php7.{{webapp}}.{{ansible_all_ipv4_addresses|last}}"
+  - "php7.{{webapp}}.{{ansible_hostname}}"
+  - "php7.{{webapp}}.{{lb.external_loadbalanced_ip}}"
+
+webapp_cron_jobs:
+  - {name: "Run CyberMedCRM Scheduled Jobs", minute: "{{webapp_cron_interval}}", job: "# su - {{web_user}}  --shell=/bin/bash -c  '{{webapp_cron_file}}' >> {{webapp_cron_log_file}} 2>&1"}
+  - {name: "Run CyberMedCRM Frequent Jobs", minute: "{{frequent_cron_interval}}", job: "# su - {{web_user}}  --shell=/bin/bash -c  '{{frequent_cron_file}}' >> {{frequent_cron_log_file}} 2>&1"}
+
+webapp_extra_nginx_conf: "\n
+  \n
+  \n\t#sugarcrm uses large cookies in email & some other views
+  \n\t#large_client_header_buffers 8 16k;
+
+  \n# secure admin
+  \n
+  \n\tlocation /_other
+  \n\t{
+  \n\t\t    #auth_pam    'Secure Admin Zone';
+  \n\t\t    #auth_pam_service_name   'pam_nginx';
+  \n\t\t
+  \n\t\t    auth_basic           'Secure Admin Zone';
+  \n\t\t    auth_basic_user_file /etc/nginx/.htpasswd;
+  \n}
+  \n
+  \n\t# Block access to stuff in the root
+  \n\tlocation ~* \\.(pl|cgi|py|sh|lua|log|md5)$
+  \n\t{
+  \n\t\t   return 444;
+  \n\t
+  \n\t}
+
+  \n\t# Block access to data folders
+  \n\tlocation ~ /(soap|cache|upload|xtemplate|data|examples|include|log4php|metadata|modules|diagnostic|blowfish|emailmandelivery)/.*\\.(php|pl|py|jsp|asp|sh|cgi|tpl|log|md5)$ {
+  \n\t\treturn 444;
+  \n\t}
+  \n
+"
+
+webapp_extra_php_nginx_conf: "\n
+    \n
+    \n\t#sugarcrm uses large cookies in email & some other views
+    \n\t#client_max_body_size 32m;
+    \n#
+    \n
+    "
+webapp_post_install_template_files:
+  - "{{www_root}}/{{webapp}}{{webapp_git_relativepath}}/_run_cron_debug.sh"
+  - "{{www_root}}/{{webapp}}{{webapp_git_relativepath}}/_run_cron.sh"
+  - "{{www_root}}/{{webapp}}{{webapp_git_relativepath}}/_run_frequent_jobs.sh"
+  - "{{www_root}}/{{webapp}}{{webapp_git_relativepath}}/_run_custom_jobs.sh"
+  - "{{www_root}}/{{webapp}}{{webapp_git_relativepath}}/_dump_db_and_webroot.sh"
+
+webapp_post_install_script: "#!/bin/bash\n
+    set -x #echo on\n
+    set -e #exit if any command fails\n\n
+    #make script files executable\n
+    chmod +x {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/*.sh;\n
+    #remove AOD_Index - else causes corrupted index error - and can index invalid data\n
+    rm -Rf {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/modules/AOD_Index/Index/Index/*;\n
+    #remove previous common webapp symlink\n
+    rm -Rf {{www_root}}/{{webapp_common_prefix}};\n
+    #remove opcache files\n
+    rm -Rf {{opcache_file_cache_path_base}}/*;\n
+    #ensure web user can login\n
+    chsh -s /bin/bash {{web_user}} \n
+    #create shared upload folder\n
+    runuser  {{web_user}} -c 'mkdir -p {{www_root}}/{{webapp_common_prefix}}_shared_upload;' \n
+    #ensure config and other files cannot be read by other users\n
+    chmod -R 0770 {{www_root}}/{{webapp}} | true;\n
+    # # #DO NOT create common webapp symlink pointing to new release - developer will do manually after testing, taking down live, upgrading live DB, and pointing new app to live db\n
+    # # runuser  {{web_user}} -c 'ln -s {{www_root}}/{{webapp}} {{www_root}}/{{webapp_common_prefix}}';\n
+    #ensure aod index dir exists & is writable by all\n
+    runuser  {{web_user}} -c 'mkdir -p {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/modules/AOD_Index/Index/Index'; \n
+    chown -Rf {{web_user}}:{{web_group}} {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/modules/AOD_Index/Index/Index;\n
+    chmod -R 0777 {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/modules/AOD_Index/Index/Index;\n
+    #cd to webroot\n
+    cd {{www_root}}/{{webapp}}{{webapp_git_relativepath}};\n
+    #change name of the db_host_name - single quotes escaped\n
+    sed -i {{double_quote}}s/'db_host_name' => '.*'/'db_host_name' => '{{webapp_db_host_name}}'/{{double_quote}} ./config.php\n
+    #change name of the webapp_db_user_name - single quotes escaped\n
+    sed -i {{double_quote}}s/'db_user_name' => '.*'/'db_user_name' => '{{webapp_db_user_name}}'/{{double_quote}} ./config.php\n
+    #change name of the webapp_db_user_name - single quotes escaped\n
+    sed -i {{double_quote}}s/'db_password' => '.*'/'db_password' => '{{webapp_db_user_password}}'/{{double_quote}} ./config.php\n
+    #change name of the database - single quotes escaped\n
+    sed -i {{double_quote}}s/'db_name' => '.*'/'db_name' => '{{webapp_db_name}}'/{{double_quote}} ./config.php\n
+    #developer mode off\n
+    sed -i {{double_quote}}s/'developerMode'] = .*;/'developerMode'] = false;/{{double_quote}} ./config_override.php\n
+    ####
+    #enable redis cache\n
+    sed -i {{double_quote}}s/$sugar_config{{back_slash}}['external_cache_disabled_redis'{{back_slash}}].*;/$sugar_config['external_cache_disabled_redis'] = false;/{{double_quote}} ./config_override.php\n
+    #set redis host\n
+    sed -i {{double_quote}}s/$sugar_config{{back_slash}}['external_cache.redis.host'{{back_slash}}].*;/$sugar_config['external_cache.redis.host'] = '{{lb.internal_loadbalanced_ip}}';/{{double_quote}} ./config_override.php\n
+    #set redis port\n
+    sed -i {{double_quote}}s/$sugar_config{{back_slash}}['external_cache.redis.port'{{back_slash}}].*;/$sugar_config['external_cache.redis.port'] = '{{redis_listen_port}}';/{{double_quote}} ./config_override.php\n
+    #set redis password\n
+    sed -i {{double_quote}}s/$sugar_config{{back_slash}}['external_cache.redis.password'{{back_slash}}].*;/$sugar_config['external_cache.redis.password'] = '{{redis_auth_password}}';/{{double_quote}} ./config_override.php\n
+    ####
+    #quickrepair \n
+    su - {{web_user}}  --shell=/bin/bash -c  '{{webapp_quickrepair_file}}' >> {{webapp_quickrepair_log_file}} 2>&1 | /bin/true \n
+    chown -Rf {{web_user}}:{{web_group}} {{www_root}}/{{webapp}}{{webapp_git_relativepath}}
+    \n"
+
+
+#dirs we wish to share via nfs on this host
+webapp_nfs_mounts_always:
+   - name: "upload"
+     local_path_root: "{{www_root}}"
+     local_path_full: "{{www_root}}/{{webapp}}{{webapp_git_relativepath}}/upload"
+     mount_path_root: "{{nfs_shares_available.webapps_root}}"
+     mount_path_full: "{{nfs_shares_available.webapps_root}}/{{webapp_common_prefix}}/upload"
+     tmp_mount_path: "/tmp{{www_root}}"
+     fstype: "nfs"
+
+#bugCMS: suitecrm performance is terrible is cache directory is not local. even if /var/www is on gluster and cache is mounted on nfs server, performance degrades from1sec to 8secs!!!
+webapp_nfs_mounts_if_clustered_www:
+   - name: "cache"
+     local_path_root: "{{www_root}}"
+     mount_path_root: "{{nfs_shares_available.webapps_root}}"
+     mount_path_full: "{{nfs_shares_available.webapps_root}}/{{webapp_common_prefix}}/cache"
+     local_path_full: "{{www_root}}/{{webapp}}{{webapp_git_relativepath}}/cache"
+     tmp_mount_path: "/tmp{{www_root}}"
+     fstype: "nfs"
+
+
+#
+#webapp_post_install_script_nfs_mounted_dirs:
+#   - {name: "cache", script: "#!/bin/bash\n
+#      set -x #echo on\n
+#      set -e #exit if any command fails\n\n
+#      #remove cache directory \n
+#      rm -Rf {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/cache; \n
+#      #link cache directory to local directory \n
+#      runuser  {{web_user}} -c 'mkdir -p ;' \n
+#      mount  {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/cache; \n
+#      #
+#   "
+#   }
+#
+#   - {name: "upload", script: "#!/bin/bash\n
+#      set -x #echo on\n
+#      set -e #exit if any command fails\n\n
+#      #remove upload directory \n
+#      rm -Rf {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/upload; \n
+#      #link upload directory to local directory \n
+#      runuser  {{web_user}} -c 'mkdir -p {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/upload;' \n
+#      mount {{external_nfs_mounts}} {{www_root}}/{{webapp}}{{webapp_git_relativepath}}/upload; \n
+#      #
+#      "
+#   }

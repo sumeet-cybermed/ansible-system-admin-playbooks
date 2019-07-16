@@ -1,0 +1,36 @@
+# ---
+# - name: Install php7 ppa:ondrej/php-7.0 repo
+  # apt_repository: repo='ppa:ondrej/php-7.0' state=present update_cache=yes
+    
+# - name: Install PHP packages (apt)
+  # shell: "apt-get -y install php7*"
+  # ignore_errors: true #cannot install multiple php versions on ubuntu unleess compiling manually
+ 
+
+# - name: copy/replace php-fpm conf file (apt)
+  # template:
+    # src: ../php-fpm/templates/etc/php/fpm/pool.d/www.conf
+    # dest: /etc/opt/remi/php70/php-fpm.d/www.conf
+    # owner: root
+    # group: root
+    # mode: 0755
+
+# - name: copy extra php settings (apt)
+  # template:
+    # src: ../php-fpm/templates/etc/php/mods-available/zz_php_custom_settings.ini
+    # dest: /etc/opt/remi/php70/php.d/zz_php_custom_settings.ini
+    # owner: root
+    # group: root
+    # mode: 0755
+    
+# - name: set log permissions (needed for centos for pml to work)
+  # command: chown -R {{ web_user }}:{{ web_group }} /var/log/php-fpm/      
+  # ignore_errors: true
+    
+# - name: set log permissions (needed for centos for pml to work)
+  # command: chown -R {{ web_user }}:{{ web_group }} /var/log/php-fpm/      
+  # ignore_errors: true
+  
+# - name: enable autostart of php-fpm70 (apt)
+  # service: name=php70-php-fpm enabled=true state=restarted
+  # sudo: yes

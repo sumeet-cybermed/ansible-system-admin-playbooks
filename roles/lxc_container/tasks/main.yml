@@ -1,0 +1,33 @@
+# configure lxc_container
+
+- debug: var={{item}}
+  with_items:
+    - add_lxc_nic_maps
+
+# ++++++++++++++++++++++++++++++++++++++++++++++    
+# extra nic configuration if required
+# ++++++++++++++++++++++++++++++++++++++++++++++
+# usage:
+#  in vagrant up (first time) or vagrant reload --provision or ansible --extravars, pass
+# ----------------------------------
+#  to create a bridged veth lxc network: - note: must set hostnic in virtualbox to promiscuous mode so all external traffic is seen by intermediate host 
+# ----------------------------------------
+#    --add_lxc_nic_maps=bridged-<hostnic>-<new containernic>-<container nic static ip, leave blank for dhcp>-<container nic netmask, leave blank for dhcp>-<container nic gateway, leave blank for dhcp>  
+# e.g. 
+#    --add_lxc_nic_maps=bridged-eth3-ext3-172.28.128.51-255.255.255.0-172.28.128.1 # static 
+#    --add_lxc_nic_maps=bridged-eth3-ext3 # dhcp
+#
+# ----------------------------------
+#  to create a phys lxc network - note <hostnic> will disappear from host!
+# ----------------------------------------
+#    --add_lxc_nic_maps=physical-<hostnic>-<new containernic>-<container nic static ip, leave blank for dhcp>-<container nic netmask, leave blank for dhcp>-<container nic gateway, leave blank for dhcp>  
+
+# e.g. 
+#    --add_lxc_nic_maps=physical-eth3-ext3-172.28.128.51-255.255.255.0-172.28.128.1 # static 
+#    --add_lxc_nic_maps=physical-eth3-ext3 # dhcp
+# ----------------------------------
+- name: extra nic configuration if required
+  include: add_lxc_nic_maps.yml
+  when: add_lxc_nic_maps is defined and add_lxc_nic_maps != ""
+  tags: ['always']
+  

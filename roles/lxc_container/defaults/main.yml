@@ -1,0 +1,31 @@
+add_lxc_nic_maps: ""
+
+parsed_add_nic_map: "{% if add_lxc_nic_maps!='' %}{{add_lxc_nic_maps.split('-')|list}}{% else %} []{% endif %}"
+
+###
+mapped_nic_type: "{% if parsed_add_nic_map|length>0 %}{{parsed_add_nic_map[0]}}{% else %}{% endif %}"
+
+host_mapped_nic: "{% if parsed_add_nic_map|length>1 %}{{parsed_add_nic_map[1]}}{% else %}{% endif %}"
+
+guest_mapped_nic: "{% if parsed_add_nic_map|length>2 %}{{parsed_add_nic_map[2]}}{% else %}{% endif %}"
+
+guest_ipaddr: "{% if parsed_add_nic_map|length>3 %}{{parsed_add_nic_map[3]}}{% else %}{% endif %}"
+
+guest_ip_netmask: "{% if parsed_add_nic_map|length>4 %}{{parsed_add_nic_map[4]}}{% else %}{% endif %}"
+
+guest_ip_gateway: "{% if parsed_add_nic_map|length>5 %}{{parsed_add_nic_map[5]}}{% else %}{% endif %}"
+###
+
+apply_nic_map: "{{parsed_add_nic_map != '' and host_mapped_nic != '' and guest_mapped_nic != '' and container_name != ''}}"
+
+###
+lxc_container_path: "/var/lib/lxc"
+
+container_path: "{{lxc_container_path}}/{{container_name}}"
+###
+container_config_file: "{{container_path}}/config"
+
+###
+container_network_interfaces_file: "{{container_path}}/rootfs/etc/network/interfaces"
+###
+host_network_interfaces_file: "/etc/network/interfaces"

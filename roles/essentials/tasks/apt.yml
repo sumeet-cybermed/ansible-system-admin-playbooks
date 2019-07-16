@@ -1,0 +1,41 @@
+
+# - name: install dotdeb key 
+  # apt_key: url=https://www.dotdeb.org/dotdeb.gpg  state=present
+  # when: "ansible_os_family == 'Debian'"
+    
+# - name: install dotdeb for debian
+  # apt_repository: "repo='deb http://packages.dotdeb.org {{ ansible_lsb.codename }} all' state=present update_cache=yes"
+  # when: "ansible_os_family == 'Debian'"
+  
+- name: add essential packages (apt)
+  tags:  install_packages
+  apt: name={{item}} state={{installed_package_state}}
+  with_items:
+    - software-properties-common 
+    - python-software-properties 
+    - python-setuptools
+    - python-passlib 
+    - python-dev
+    - python-pycurl
+    - cifs-utils
+    - git
+    - make
+    - inetutils-tools 
+    - inetutils-ping
+    - build-essential
+    - g++ 
+    - htop
+    - curl
+    - unzip
+    - traceroute
+    - mercurial
+    - pkg-config    
+    - nano
+    - mlocate
+    - iptraf
+    - iotop
+    - ntp
+    - bash
+    - postfix
+    - ncurses
+    - ncdu

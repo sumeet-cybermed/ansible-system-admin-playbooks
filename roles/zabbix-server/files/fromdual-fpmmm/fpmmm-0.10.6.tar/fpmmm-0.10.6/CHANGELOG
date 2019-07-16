@@ -1,0 +1,1101 @@
+#
+# FromDual Performance Monitor for MySQL and MariaDB (fpmmm)
+# CHANGELOG
+#
+
+
+Version 0.10.6
+--------------
+
+Change #680
+* MaaS: Function curl_file_create implemented for php < 5.5
+
+Change #678
+* CHANGELOG updated and release tagged.
+
+Change #677
+* Added ORDER BY to all GROUP BY to be compliant for the future.
+
+Change #673
+* Zabbix 3.0 templates added.
+
+Change #672
+* InnoDB template: Fixed InnoDB template to work with Zabbix v3.0.
+
+Change #668
+* MaaS: Debug message fixed.
+
+Change #667
+* Maas: Curl upload fixed.
+
+Change #654
+* Process: Wrong substitution in process vm calculation fixed.
+
+Change #653
+* Galera template: Galera items changed from normal to delta.
+
+Change #652
+* InnoDB template: InnoDB locking graph improved.
+
+Change #651
+* Agent: Do not connect to server bug fixed.
+
+Change #650
+* InnoDB: Deadlock and Foreign Key errors are only escaped with xxx when used in
+  MaaS. Otherwise they are sent normaly. Foreign Key errors with MaaS is now
+  also escaped with xxx.
+
+Change #649
+* Agent: Special case when lock file was removed when it was read is fixed.
+
+
+Version 0.10.5
+--------------
+
+Change #641
+* CHANGELOG updated and release tagged.
+
+Change #640
+* Bug in error messages fixed.
+
+Change #639
+* Also sendCachedData is now checked for too big cache file. Bug from swd.
+
+Change #637
+* Configuration templates comments made more clear.
+
+Change #636
+* Template bug in fpmmm and innodb related to last() fixed, Bug from swd.
+
+Change #632
+* Innodb_flush_log_at_trx_commit, log_queries_not_using_indexes and
+  character_set_server triggers disabled by default.
+
+Change #628
+* Links for templates fixed.
+
+Change #623
+* Connection taken out into loop.
+
+Change #622
+* Flush methode trigger fixed.
+
+Change #621
+* Master triggers improved.
+
+Change #620
+* Default storage engine problem fixed after restart.
+
+Change #619
+* log_queries_not_using_indexes problem fixed after restart.
+
+Change #618
+* Trigger binlog_format MIXED with filtering rules trigger fixed.
+
+Change #615
+* NUMA and virtualization information added.
+
+Change #614
+* CPU count added.
+
+Change #613
+* Add delay for not so frequent changing data.
+
+Change #612
+* I/O r/w wait experimental items implemented.
+
+Change #611
+* I/O statistics calculation improved.
+
+Change #610
+* Device sda5 removed.
+
+Change #609
+* Server graph fixed.
+
+Change #608
+* IOPS graph added.
+
+Change #607
+* Error message made more clear.
+
+Change #605
+* Master without binary log fixed.
+
+Change #604
+* stmt error fixed.
+
+Change #600
+* Innodb transaction log traffic trigger and graph added.
+
+Change #599
+* InnoDB variables innodb_log_files_in_group added for log traffic threashold.
+
+Change #596
+* Seconds behind master is only sent when running.
+
+Change #595
+* Slave template clean-up.
+
+Change #592
+* Slave error message optimization done.
+
+Change #591
+* New Slave status is reported correctly now
+
+Change #590
+* Warning is written to the log file if slave module is configured for a non
+  slave instance.
+
+Change #589
+* InnoDB Force Recovery Trigger severity increased.
+* Affects innodb template.
+
+Change #588
+* Trigger for innodb_flush_method change added.
+* Affects innodb template.
+
+Change #585
+* Regex bug in master module fixed.
+
+Change #583
+* New trigger for Binlog_format mixed and filtering on master.
+* Severity increased on statement filtering.
+* Affects master template.
+
+Change #582
+* Fixed some old broken triggers and its item values after DB restart.
+* Affects mysql template.
+
+Change #581
+* All broken SQL queries fixed again.
+
+Change #579
+* Slave error message catching implemented.
+* Affects slave template.
+
+Change #578
+* innodb_flush_method item added.
+* Affects innodb template.
+
+Change #573
+* Create directory for log file automatically if it does not exist.
+
+Change #572
+* Made warning more clear in sendData function.
+
+Change #569
+* Some statements covered with error catching.
+
+
+Version 0.10.4
+--------------
+
+Change #567
+* CHANGELOG updated.
+
+Change #566
+* Privilege problem in sercurity module caugth and error message written.
+
+
+Version 0.10.3
+--------------
+
+Change #559
+* CHANGELOG updated.
+
+Change #558
+* Bug in fpmmmInstaller.inc fixed.
+
+Change #557
+* Master module error fixed.
+
+Change #554
+* preg_replace error fixed (FromDualMySQLagent.inc).
+
+Change #553
+* Deadlock and foreign key error files move from /tmp to cacheBase.
+
+Change #552
+* Deadlock and foreign key error catching fixed (bug 162).
+
+
+Version 0.10.2
+--------------
+
+Change #546
+* CHANGELOG updated.
+
+Change #543
+* in_array bug fixed.
+
+Change #542
+* Moved RELEASE constant out Constants.inc into config.inc.
+
+Change #541
+* Typo fixed.
+
+Change #540
+* Unlink error suppressed.
+
+Change #539
+* zabbix sender rc=0 caught, bug from production.
+
+Change #535
+* fpmmm template synchronized, version trigger and sending data again trigger
+  added.
+
+Change #534
+* Changes in templates from our MaaS backported.
+
+Change #533
+* Upgraded templates to Zabbix version 2.0.9. This means it does not work on
+  Zabbix 1.8 any more.
+
+Change #531
+* Make RELEASE unique and test is automatically correctly done in the future.
+
+Change #530
+* License tag is substitued correctly now.
+
+Change #528
+* fpmmm template updated to zabbix 2.2 style and fpmmm version check added.
+
+
+Version 0.10.1
+--------------
+
+Change #526
+* CHANGELOG updated.
+
+Change #523
+* Regexp pattern fixed for mr_versions.
+
+Change #522
+* Defaults adapted and security template data typo fixed.
+
+Change #512
+* Innodb buffer pool hit ratio rounded to 2 digits.
+
+Change #511
+* Galera status now gathered with causal_read off.
+
+Change #510
+* Innodb_os_log_written item added.
+
+Change #507
+* Item sending prepared for empty strings.
+
+Change #504
+* logLevel == replace by >=
+
+Change #503
+* Trailing / from datadir is removed.
+
+Change #502
+* Log of cachedData more verbose.
+
+Change #497
+* zabbix_sender stuff fixed and made more robust.
+
+Change #496
+* Cconnection problems and error catching fixed.
+
+Change #494
+* New naming convention fpmmm implemented.
+
+Change #489
+* NDB cluster stuff removed and locking made more robust.
+
+Change #488
+* InnoDB hash searches fixed.
+
+Change #487
+* Templates moved from xml folder to tpl folder and other file structure and
+  renaming.
+
+Change #484
+* memcached stuff activated.
+
+Change #481
+* zabbix-sender on SuSE should work now as well. Bug #149.
+
+Change #480
+* Bug report on new drbd from fabian/atrada fixed.
+
+Change #478
+* exec/system replaced by my_exec.
+
+Change #477
+* InnoDB Flush Log at Trasaction Commit Serverity lowered from Warning to
+  Information.
+
+Change #472
+* Debug parameter replaced by LogLevel parameter, including all templates and
+  warning for deprecation.
+
+Change #460.1.17
+* export LC_ALL=C added to all O/S calls to make it language independent.
+
+Change #460.1.12
+* Usage added (--help)
+
+Change #460.1.2
+* All perl code replaced by PHP code.
+
+Change #458
+* Bug fix on cache clean-up on corruption.
+
+Change #453.1.7
+* Mac OSX (darwin) support added, partially.
+
+Change #453.1.3
+* Changed defaults away from /tmp This is no good location for persistent things
+  because of RedHat tmpcleaner job.
+
+Change #453.1.1
+* Debugging info added for missing lock file.
+
+
+Version 0.9.3
+-------------
+
+Change #429
+* CHANGELOG updated.
+
+Change #428
+* InnoDB Status module: SHA stuff was not cleaned-up properly (see change #419).
+
+Change #426
+* Master module: Missing values in cache file fixed.
+
+Change #423
+* Agent: Kill trap should report to the log file as well now.
+
+Change #422
+* Agent: Typo fixed.
+
+Change #420
+* MySQL module: DB down not detected (bug #27/#138).
+
+Change #419
+* InnoDB Status module: SHA fix (bug #139).
+
+Change #418
+* Testing infrastructure extended for test automatizing to cover bug.
+
+Change #417
+* Example for timeshift feature added to configuration template.
+
+
+Version 0.9.2
+-------------
+
+Change #415
+  * CHANGELOG updated.
+
+Change #409
+  * DRBD information should now be reported correctly (bug #133).
+
+Change #408
+  * Fix of mpm_mr_version newline at EOL which affects zabbix_sender.
+
+Change #407
+  * zabbix_sender return code change from 2.2 and 2.1.7 fixed (bug #124).
+
+Change #403
+  * Simple test infrastructure implemented.
+
+Change #390
+  * Log rotate problem caught and documented.
+
+Change #389
+  * 2 exit errors fixed.
+
+Change #387
+  * File locations adapted to the newest standard.
+
+Change #385
+  * Using global variables instead of local ones.
+
+Change #384
+  * Cache file is removed instead of shrinked now, and remove lock file message should be at the rigth place.
+
+Change #381
+  * Agent locking problem fixed.
+
+Change #379
+  * Check of upload file size and shrink introduced.
+
+Change #378
+  * Proxy settings should be considered now for MaaS solution.
+
+Change #375
+  * Data upload switched from http to https.
+
+Change #374
+  * Directory structure cleaned-up, send data made more verbose related to http/s send methode errors and prepared for https only behaviour.
+
+Change #373
+  * Some minor bug fixes.
+
+Change #371
+  * wsrep_last_committed item added.
+
+Change #370
+  * Some items added to templates according to customer needs.
+
+
+Version 0.9.1
+-------------
+
+Change #369
+  * CHANGELOG updated and version tagged.
+
+Change #366
+  * Template improved for easier use.
+
+Change #365
+  * Security module added.
+
+Change #364
+  * Debug message was too verbose. Fixed.
+
+Change #363
+  * Deadlock bug from customer fixed.
+
+Change #362
+  * Some items from master templated added to the binlog group
+
+Change #361
+  * Slave and mysql templated fixed according to experience of customer
+
+Change #360
+  * Some compare errors removed.
+
+Change #359
+  * Innodb log information and pending I/O information added.
+
+Change #358
+  * Sort_buffer_size trigger added.
+
+Change #357
+  * Slave error skipped trigger added.
+
+Change #356
+  * Some slave thread trigger backported.
+
+Change #355
+  *Check for isolation level added.
+
+Change #354
+  * Binlog do and ignore filter warning enabled.
+
+Change #353
+  * Make all error exits properly and catch term signal.
+
+Change #350
+ *Innodb deadlock trigger was downgraded from warning to info.
+
+Change #349
+  * Timeshift feature implemented.
+
+Change #348
+  * Flush_time trigger added.
+
+Change #347
+  * MyISAM flush_time variable added.
+
+Change #346
+  * Read_buffer_size and max_allowed_package conflict implemented.
+
+Change #345
+  * Binlog_cache_size too small trigger backported from life.
+
+Change #344
+  * Read_buffer_size rule added.
+
+Change #343
+  * Max_allowed_packet and read_buffer_size added for rules.
+
+Change #342
+  * 2 new variables added for allowing new rules.
+
+Change #341
+  * All 24 cores added to template items
+
+Change #340
+  * Physical RAM vs. process memory vsz works now.
+
+Change #339
+  * Process memory graph with RAM size.
+
+Change #337
+  * Changed agentlockfile and defaults for Windows.
+
+Change #336
+  * Process module a bit more Win compatible.
+
+Change #334
+  * Thread_stack_size too small alert implemented
+
+Change #333
+  * Network packet graph reordered.
+
+Change #332
+  Trigger for missing maas agent added.
+
+Change #331
+  * Ret value was conflicting in check_remote_agent leading to wrong results.
+
+Change #329
+  * Check_remote_agent script added.
+
+Change #328
+  * Agent is ok item added for server side check.
+
+Change #327
+  * Server graphs added for CPU 2 and 3 and eth1.
+
+Change #326
+  * Server screens made nicer.
+
+Change #325
+  * Screens for galera, network, cpu and server added
+
+Change #321
+  * Graph title typo fixed
+  * Https is possible now
+
+
+Version 0.9
+-----------
+
+Change #318
+  * Innodb_buffer_pool_pages_misc_b error fixed
+
+Change #314
+  * Div by zero error fixed
+
+Change #309
+  * Innodb buffer pool max dirty pages bytes was not delivered.
+
+Change #304
+  * Network should report correctly also on red-hat now.
+
+Change #298
+  * CPU count should be adjusted now to 100% and server template fixed.
+
+Change #297
+  * Free diskspace calc was wrong. Using the more secure one.
+
+Change #296
+  * Disk i/o time was counted absolute which is wrong, fixed.
+
+Change #293
+  * df -k problem with too long device names fixed.
+
+Change #286
+  * MySQL mr version was missing, added.
+
+Change #282
+  * Bug in locking fixed.
+
+Change #275
+  * Check for missing modules added.
+
+Change #273
+  * div/0 cases fixed.
+
+Change #269
+  * Deadlock and Foreign key stuff fixed.
+
+Change #267
+  * Zabbix server check error fixed.
+
+Change #262
+  * Binlog events removed from master modules and stmt cache item added.
+
+Change #261
+  * Server trigger fixed.
+
+Change #259
+  * MyISAM buffer pool hit rate item was wrong, fixed now.
+
+Change #252
+  * Data loader and receiver should write a timestamp now, Bug #11.
+
+Change #251
+  * Innodb buffer pool read graph added, Bug #3.
+
+Change #250
+  * sql_mode trigger added, Bug: #5.
+
+Change #249
+  * Master module cleaned up and bug fixed, Bug #19.
+
+Change #247
+  * InnoDB block compression checked, Bug #26 solved.
+
+Change #242
+  * InnoDB compress time item fixed: Bug #26.
+
+Change #241
+  * Server network graphs finished.
+
+Change #239
+  * Galera Cluster graphs, items and triggers added.
+
+Change #238
+  * All missing Galera Cluster items added.
+
+Change #235
+  * Slave trigges made more robust.
+
+Change #232
+  * Several graphs fixed and reniced.
+
+Change #230
+  * Log_output trigger false alert fixed.
+
+Change #229
+  * Trigger with default storage engine alert is fixed now.
+
+Change #228
+  * Trigger for too small table xxx cache implemented.
+
+Change #226
+  * Templates upgraded to Zabbix 1.8.11.
+
+Change #225
+  * Kill agent mechanism is fixed.
+
+Change #224
+  * Zabbix server should not be queried in MaaS mode anymore.
+
+Change #223
+  * Removed all shell alike exe commands from InnoDB module.
+
+Change #222
+  * Interrupt graph and item fixed.
+
+Change #221
+  * Bug in master trigger fixed!
+
+Change #220
+  * Expiry error fixed and upload info logging more verbose.
+
+Change #219
+  * Fix for too big cache files added.
+
+Change #215
+  * Server CPU graph added.
+
+Change #209
+  * MyISAM byte graph and hit ratio added.
+
+Change #208
+  * Open files limit trigger added.
+
+Change #207
+  * All item histories set to 30 days
+
+Change #206
+  * Some item types fixed in templates.
+
+Change #205
+  * Some graphs were cleaned up.
+
+Change #204
+  * InnoDB buffer pool hit ratio and max dirty bytes added.
+
+Change #202
+  * Query cache additional items added.
+
+Change #201
+  * All relevant Galera Cluster v1.1 variables and status variables are caught.
+
+Change #200
+  * MyISAM blocks reported in bytes as well now.
+
+Change #199
+  * Innodb buffer pool info reported now in bytes as well.
+
+Change #197
+  * Agent reports every run now. Better visibility.
+
+Change #196
+  * Missing zabbix_sender error catched now.
+
+Change #193
+  * Server cpu added.
+
+Change #190
+  * MyISAM key blocks used now and key buffer hit ratio added.
+
+Change #189
+  * Free diskspace added.
+
+Change #188
+  * Server memory and swap data and graph added.
+
+Change #187
+  * Virtual Memory data added.
+
+Change #186
+  * Machine readble version for MySQL and MPM introduced.
+
+
+Version 0.8.1
+-------------
+
+Change #183
+  * Minor docu glitches improved.
+
+Change #181
+  * Table open cache and table defintion cache graphs improved plus triggers added
+
+
+Version 0.8
+-----------
+
+Change #180
+  * Version 0.8 finished
+
+Change #179
+  * MaaS installation guide written and added.
+
+Change #178
+  * ndb_cluster_connection_pool is now reported correctly and trigger
+    works accordingly now.
+
+Change #177
+  * Some templates fixes and more logging information added to better
+    track problems.
+
+Change #176
+  * If agent lock exist, next agent did not exit but start. This is
+    fixed now.
+
+Change #173
+  * Clean-up of old stuff
+
+Change #172
+  * Some cosmetic fixes
+
+Change #170
+  * 1 missing item to the MyISAM template added.
+
+Change #169
+  * 2 missing items added to Process template.
+
+Change #168
+  * Bug fixes shown because of the previous fixes.
+
+Change #167
+  * MySQL module fixed. Erronous itme was sql_mode.
+
+Change #166
+  * Master template fixed (adding 20 missing items for binary log
+    events).
+
+Change #165
+  * Agent lock implemented. Only one agent can run per server now at a
+    time.
+    This is to prevent a system overload because of some locks or
+    timeouts etc.
+
+Change #164
+  * Data load is made more verbose to better isolate bugs in case of
+    errors.
+
+Change #163
+  * Disk full error of server part is now reported correctly.
+
+Change #162
+  * Verbosity flag for zabbix_sender set correctly.
+
+Change #161
+  * Log verbosity of MaaS sever part brought under control.
+
+Change #160
+  * Every error in the whole package is unique now. This enabled us to
+    identify the code part exactly in case of troubles.
+
+Change #159
+  * Fixes for bugs showing up in MaaS mode.
+
+Change #157
+  * Agent log file is always touched for every call.
+
+Change #155
+  * Minior bug fixes caused by the Maas functionality.
+
+Change #151
+  * Cache file is now per server/node.
+
+Change #147
+  * Some bug fixes of the new MaaS functionality.
+
+Change #146
+  * The MySQL Performance Monitor is now capable to be operated in a
+    MaaS (Monitoring as a Service) set-up.
+    The customer has only to install the agent now. Service can be
+    located remote and is fed via HTTP file uploads.
+
+Change #145
+  * Foreign Key and Deadlock errors are now reported through
+    zabbix_sender. This allows us to have correct line brakes.
+
+Change #143
+  * Domain is now global.
+
+Change #142
+  * Data are mostly cached in the cache file first instead of calling
+    zabbix_sender zillions of times.
+
+Change #141
+  * Zabbix server port is now configurable
+
+Change #139
+  * Foreign Key Error detection for InnoDB was implemented according to
+    a customers whish.
+
+Change #138
+  * Deadlock detection for InnoDB was implemented according to a
+    customers whish.
+
+Change #135
+  * Code clean-up was performed
+
+Change #134
+  * XtraDB and InnoDB agents/templates were merged. There is no more
+    difference between GPL and commercial builds.
+    In fact, this means, that the InnoDB module and the NDB module were
+    Opensourced!
+
+
+Version 0.7.2
+-------------
+
+Change #132
+  * Security problem fixed. Password is not displayed in log anymore.
+
+Change #131
+  * Agent start trigger (check) moved from mysql module to mpm module
+
+Change #129
+  * Galera Template and some bugs fixed
+
+Change #128
+  * Templates fixed
+
+Change #126
+  * Some bugs in ndb, memcached and drbd module fixed.
+
+Change #125
+  * Some more bugs in Agent fixed.
+
+Change #122
+  * MPM version tag added
+
+Change #121
+  * Path to libraries is not hard coded anymore but follows $basedir/lib
+    The performance Monitor can now be located anywhere...
+
+Change #120
+  * Made Cache File configurable and fixed some minor typo bugs
+
+Change #119
+  * Agent prepared for Deadlock and Foreign Key Errors
+
+Change #117, #118
+  * Name collision in the Server module fixed
+
+Change #116
+  * Aria Graphs fixed
+
+Change #115
+  * InnoDB Row Locking added (status and graph)
+
+Change #114
+  * Some MySQL variables added for monitoring.
+  * Triggers for some of those implemented.
+
+Change #109
+  * Old basename style code replace by new perl style
+  * Modules where called wrongly or not at all...
+
+Change #108
+  * Typo error in the server module fixed
+
+Change #107
+  * Galera Module added
+
+
+Version 0.7.1
+-------------
+
+Change #106
+  * Some more error messages cleaned up.
+
+Change #105
+  * Slave Lag trigger with time constraints added. Thanks to rince for the input.
+
+Change #104
+  * Code around basedir done more nicely. Thanks to erkules and rince for showing us the solution.
+
+Change #103
+  * Warnings around key_cache_blocks should not appear anymore.
+
+Change #102
+  * Fall-back gather method mysql removed. This requires that the Perl Module is now compulsory. This is an incompatibility change!
+
+
+Version 0.7
+-----------
+
+Change #100
+  * All graphs of MEM v2.3.3 should now work for Performance Monitor as well.
+
+Change #99
+  * Templates reniced and cleaned up.
+
+Change #98
+  * Maria SE template renamed to the new naming of Aria.
+
+Change #97
+  * Made InnoDB Graphs more MEM compliant.
+
+Change #96
+  * InnoDB status added to data gathering process.
+
+
+Version 0.6
+-----------
+
+Change #94
+  * DRBD module and template added.
+
+Change #91
+  * Doku bugs fixed.
+
+
+Version 0.5
+-----------
+
+Change #88
+  * Workaround for units in PBXT added.
+
+Change #85
+  * Graphs improved and new items for aria SE added.
+
+Change #84
+  * Status information for the Aria Storage Engine added.
+
+Change #83
+  * Logging level for agent adjusted.
+
+Change #80
+  * Agent caching added. The FromDual agent can cache information now if it has no
+    connection to the Zabbix Server.
+    This gives the possibility to gather information without the availability of a
+    Zabbix server and load the data later off-line.
+
+Change #79
+  * Start/stop scripts for Zabbix agent and server added
+
+Change #78
+  * MyISAM, NDB, PBXT and MySQL graphs improved.
+
+Change #74
+  * File (and thus I/O) related status information added: Binlog_cache_disk_use,
+    Binlog_cache_use, Created_tmp_files, Opened_files
+
+Change #73
+  * Status information Access_denied_errors, Binlog_bytes_written and Handler_read_last
+    were added for MySQL 5.5 and Percona Server.
+
+Change #72
+  * Key_blocks_warm status information added for MariaDB.
+
+Change #70
+  * Some information for PBXT had wrong verbosity.
+
+Change #69
+  * Bugs for NDB counters were fixed.
+
+Change #67
+  * Some logging severity bugs were fixed.
+
+Change #65
+
+  * A module for monitoring Linux servers was added. This module contains
+    some metrics which are NOT included in the default template.
+
+Change #64
+  * MyISAM parameter key_cache_block_size added.
+
+Change #61
+  * Query Cache graphs improved
+  * Query Cache screen added
+  * MyISAM graphs improved
+  * MyISAM screen added
+  * InnoDB/XtraDB bug fixed for Innodb_data_reads
+  * Configuration template fixed with new verbosity levels for logging
+  * Logging verbosity adjusted in code.
+  * Tool for independent data gathering added
+
+Change #60
+  * Version and uptime item added.
+  * Process check error removed.
+  * Missing use added.
+
+Change #59
+  * Process status seems to be not supported yet.
+  * MySQL process status implemented
+  * Graph for MySQL process status and Agent process status (seems not to
+    work correctly yet?).
+  * Trigger for MySQL down implemented.
+
+Change #58
+  * INSTALL removed from template package
+  * Argument values passed correctly
+  * Error message moved to lower level function
+
+Change #57
+  * Made sure configuration file is read when passed as parameter (which was
+    not the case before).
+  * Log which configuration file is used.
+  * Cleaned up some code and changed logging verbosity numbering.
+
+Change #56
+  * Heartbeat item removed, which remained from earlier and just caused some
+    error messages.
+
+Change #55
+  * Packaging optimized. There are now 2 different packages: one for xml and
+    one for agent stuff.
+
+Change #54
+  * GPL license tag was added to file headers.
+
+Change #53
+  * Constants for logging have been moved to agent module and be reordered.
+
+Change #52
+  * Template default location for the logfile moved from /home/zabbix/log to
+    /tmp
+  * Removed log directory from tar ball
+  * Rotate log to *.rotate when > 10m. Old version is overwritten, the next
+    time.
+
+Change #51
+  * Defaul path from /home/zabbix to /usr/local
+  * Made default logging a bit less verbose
+
+Change #50
+  * Check if logfile exists. Otherwise we get the following error message:
+    Cannot write to logfile /tmp/FromDualMySQLagent.log. Please check
+    permissions.
+

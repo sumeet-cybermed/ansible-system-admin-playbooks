@@ -1,0 +1,38 @@
+---
+
+- include_vars: apt.yml
+  tags: ['always']
+  
+- name: Install python-apt
+  apt: name=python-apt
+  tags: ['install_packages']
+  
+- include: webupd8_for_apt.yml
+  when: "ansible_pkg_mgr == 'apt'"
+  tags: ['always']
+  
+- include: webupd8_for_yum.yml
+  when: "ansible_pkg_mgr == 'yum'"
+  tags: ['always']
+  
+- name: Accept Oracle License
+  debconf: name={{ item }} question='shared/accepted-oracle-license-v1-1' value='true' vtype='select'
+  with_items:
+    - oracle-java6-installer
+    - oracle-java7-installer
+    - oracle-java8-installer
+  when: java_needs_oracle
+  tags: ['install_packages']
+  
+- debug: var=java_packages
+
+- name: Install Java packages
+  apt: name={{ item }} state={{installed_package_state}}
+  with_items: java_packages
+  tags:  install_packages
+  
+- name: Remove unwanted Java packages
+  apt: name={{ item }} state=absent
+  with_items: java_packages_to_remove
+  when: java_cleanup
+  tags:  install_packages

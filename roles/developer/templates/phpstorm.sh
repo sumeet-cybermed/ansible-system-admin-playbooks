@@ -1,0 +1,1 @@
+sudo {{phpstorm_bin}}

@@ -1,0 +1,143 @@
+# -*- mode: sh; sh-basic-offset: 3; indent-tabs-mode: nil; -*-
+# vim: set filetype=sh sw=3 sts=3 expandtab autoindent:
+#
+# duplicity script for backupninja
+# requires duplicity >= 0.4.4, and >= 0.4.9 when using a custom tmpdir.
+#
+
+
+######################################
+# backupdir: Where to backup to
+# incremantal: yes/np crate incremental backups
+# full_on: Iso 3 Char Day of Week on which a new full backip should be made.
+# nicelevel: nice lebel
+# options: things like --defaults-group=mysqldX
+##############################
+
+getconf backupdir /var/backups/mysql
+getconf incremental yes
+getconf full_on mon
+getconf nicelevel 0
+getconf options
+
+#sumeet - added custom argument
+getconf defaultsfile
+
+# authentication:
+getconf user
+getconf dbusername
+getconf dbpassword
+getconf configfile /etc/mysql/debian.cnf
+
+### COMMAND-LINE MANGLING ######################################################
+
+### initialize $execstr*
+execstr_precmd=
+prepare_precmd=
+execstr_command=
+prepare_command=
+
+# day_of_week=$(date +%a)
+#sumeet - we want more frequent backups - do by day+hour+min
+day_of_week=$(date +"%m_%d_%Y_%H_%M")
+
+#sumeet: return success or failure
+this_result=0
+
+###Check for empty backupdir, if so force full backup
+if [ "$(ls -A $backupdir)" ]; then
+	incremental=$incremental
+else
+	incremental="no"
+fi
+
+### Incremental or full backup mode
+# If incremental==yes, use the default duplicity behaviour: perform an
+# incremental backup if old signatures can be found, else switch to
+# full backup.
+# If incremental==no, force a full backup anyway.
+if [ "$incremental" == "no" ]; then
+   execstr_command="$defaultsfile --backup --target-dir=$backupdir"
+   prepare_command="$defaultsfile --prepare --apply-log-only --target-dir=$backupdir"
+else
+   if [ "${day_of_week,,}" == "$full_on" ] ; then
+		execstr_command="$defaultsfile --backup --target-dir=$backupdir"
+		prepare_command="$defaultsfile --prepare --apply-log-only --target-dir=$backupdir"
+	else
+        #sumeet - make dir - failing otherwise
+        mkdir -p $backupdir/inc/${day_of_week,,}
+        #
+		# execstr_command="--backup --target-dir=$backupdir/inc/${day_of_week,,}/ --incremental-basedir=$backupdir"
+		# prepare_command="--prepare --apply-log-only --incremental-dir=$backupdir/inc/${day_of_week,,}/ --target-dir=$backupdir"
+        
+        #sumeet - add defaults file extra argument first
+        execstr_command="$defaultsfile --backup --target-dir=$backupdir/inc/${day_of_week,,}/ --incremental-basedir=$backupdir"
+		prepare_command="$defaultsfile --prepare --apply-log-only --incremental-dir=$backupdir/inc/${day_of_week,,}/ --target-dir=$backupdir"
+        
+	fi
+fi
+
+### Cleanup old backup sets (or not)
+if [ "$keep" != "yes" ]; then
+   if [ "`echo $keep | tr -d 0-9`" == "" ]; then
+      keep="${keep}D"
+   fi
+fi
+
+prepare_exit_code=0
+exit_code=0
+
+
+### Backup command
+debug "$execstr_precmd xtrabackup $execstr_command $options"
+debug "$prepare_precmd xtrabackup $prepare_command $options"
+if [ ! $test ]; then
+   outputfile=`maketemp backupout`
+   output=`nice -n $nicelevel \
+             su -c \
+                "$execstr_precmd xtrabackup $execstr_command $options >$outputfile 2>&1"`
+   exit_code=$?
+   debug $output
+   cat $outputfile | (while read output ; do
+                         if [ $exit_code -eq 0 ]; then
+                            info $output
+                            preparefile=`maketemp prepareout`
+								    prepare=`nice -n $nicelevel \
+								             su -c \
+								                "$prepare_precmd xtrabackup $prepare_command $options >$preparefile 2>&1"`
+								   prepare_exit_code=$?
+								   debug $prepare
+								   cat $preparefile | (while read output ; do
+		                        if [ $prepare_exit_code -eq 0 ]; then
+		                           info $prepare
+		                        else
+		                           error $prepare
+		                        fi
+	                        done
+	                        )
+                         else
+                            error $output
+                         fi
+                      done
+   )
+   
+   if [ $exit_code -eq 0 ]; then
+      info "Xtrabackup finished successfully."
+   else
+      fatal "Xtrabackup failed."
+      #sumeet: return success or failure
+
+   fi
+   if [ $prepare_exit_code -eq 0 ]; then
+      info "Xtrabackup prepare finished successfully."
+   else
+      fatal "Xtrabackup prepare failed."
+      #sumeet: return success or failure
+      this_result = 1
+   fi
+   rm $outputfile
+   rm $preparefile
+fi
+
+#sumeet: return success or failure
+return $this_result

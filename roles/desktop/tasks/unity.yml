@@ -1,0 +1,22 @@
+---
+    
+# - name: Install mysql server (apt)
+  # apt: name={{ item}} state={{installed_package_state}} force=yes
+  # notify:
+    # - update-rc mysql
+    # - mysql restart
+  # # tags:  [ 'mysql', 'database' ]
+  # with_items:
+    # - mysql-server-{{ db_version }}
+    # - mysql-client-{{ db_version }}
+    # - mysql-server
+    # - python-mysqldb
+  # when: "ansible_pkg_mgr == 'apt'"
+  
+# - name: Install mysql-server (yum)
+  # action: "{{ ansible_pkg_mgr }} name={{ item }} state=present"
+  # tags:  install_packages
+  # when: "ansible_pkg_mgr == 'yum'"
+  # with_items:
+    # - mysql-community-server
+    # - MySQL-python

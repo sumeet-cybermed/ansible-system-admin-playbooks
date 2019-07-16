@@ -1,0 +1,185 @@
+# These groups are read by MariaDB server.
+# Use it for options that only the server (but not clients) should see
+#
+# See the examples of server my.cnf files in /usr/share/mysql/
+#
+
+[mysqld_safe]
+log-error=/var/log/mysqld.log
+
+# this is read by the standalone daemon and embedded servers
+[server]
+
+###############
+bind-address={{ db.mysql_listen_addr }}
+
+# # # do not use 0.0.0.0 as our keep alive daemon also listens on this on host elected as as the public_ip & private_ip
+# bind-address=0.0.0.0 
+
+port			= {{db.mysql_listen_port}}
+
+datadir=/var/lib/mysql
+
+skip_name_resolve=yes
+binlog_format=ROW
+default-storage-engine=innodb
+
+##log queries
+slow_query_log_file             = /var/log/mysql.slow.log
+slow_query_log                  = 1
+log_slow_admin_statements = 1
+long_query_time = 0.1
+
+
+# allow indexing words of one char - default is 4 - need to restart  mysql and reindex after changing:  OPTIMIZE TABLE  xxx
+innodb_ft_min_token_size=1
+ft_min_word_len = 1
+
+# Disabling symbolic-links is recommended to prevent assorted security risks
+symbolic-links=0
+
+# Recommended in standard MySQL setup
+sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES 
+
+#sumeet - important to have mixedcase/variable tablename on linux just like in windows
+lower_case_table_names = 1
+
+skip-external-locking
+
+expire_logs_days	= 10
+max_binlog_size		= 100M
+
+##
+key_buffer_size=20M
+
+# for deployment on 8GB +
+# innodb_buffer_pool_size = 2048M
+##set to 70% of RAM
+innodb_buffer_pool_size = 512M
+innodb_log_buffer_size = 16M
+innodb_flush_log_at_trx_commit = 2
+innodb_thread_concurrency = 8
+innodb_read_io_threads = 64
+innodb_write_io_threads = 64
+innodb_io_capacity = 50000
+innodb_flush_method = O_DIRECT
+innodb_file_per_table
+innodb_additional_mem_pool_size = 128M
+innodb_buffer_pool_instances = 1
+innodb_autoinc_lock_mode=2
+innodb_locks_unsafe_for_binlog=1
+
+innodb_sort_buffer_size = 64M
+
+
+innodb_support_xa = 0
+innodb_commit_concurrency = 8
+innodb_old_blocks_time = 1000
+
+transaction-isolation = READ-COMMITTED
+thread_concurrency = 10
+
+interactive_timeout={{mysql_config_interactive_timeout}}
+wait_timeout={{mysql_config_wait_timeout}}
+
+###
+###
+# query_cache_size = 1024M
+# query_cache_type = 1
+# query_cache_limit = 10M
+
+# ? imp for galera clsuter?
+query_cache_size=0
+query_cache_type=0
+#
+key_buffer = 128M
+#
+max_allowed_packet = 512M
+thread_stack = 192K
+thread_cache_size = 100
+#
+table_open_cache = 16384
+table_definition_cache = 8192
+#
+sort_buffer_size = 32M
+read_buffer_size = 32M
+read_rnd_buffer_size = 32M
+join_buffer_size = 32M
+#
+myisam_sort_buffer_size = 32M
+myisam_use_mmap = 1
+#causes error : reconnect = 1
+myisam-recover = BACKUP,FORCE
+
+#Avoid Row size too large (> 8126) error
+innodb_log_file_size = 512M
+innodb_strict_mode = 0
+innodb_file_format=Barracuda
+
+###
+#
+#
+
+# this is only for the mysqld standalone daemon
+[mysqld]
+
+#
+# * Galera-related settings
+#
+[galera]
+
+#pid-file directive should be here for galera - other places dont work!
+pid-file=/var/lib/mysql/mysql.pid
+
+# Mandatory settings
+#wsrep_provider=
+#wsrep_cluster_address=
+#binlog_format=row
+#default_storage_engine=InnoDB
+#innodb_autoinc_lock_mode=2
+#bind-address=0.0.0.0
+wsrep_on=ON
+wsrep_provider=/usr/lib64/galera/libgalera_smm.so
+
+# sumeet: there should be no " or ' in next line wsrep_cluster_address else it fails see:
+ # http://stackoverflow.com/questions/24281282/failed-to-bootstrap-galera-cluster"
+wsrep_cluster_address=gcomm://{% for node in groups['cluster'] -%}
+{{ hostvars[node][lb.internal_eth_name]["ipv4"]["address"] }}{% if not loop.last %},{% endif %}
+{%- endfor %}
+
+wsrep_cluster_name='galera_cluster'
+
+wsrep_node_address={{ db.mysql_listen_addr }}
+wsrep_node_name='{{ ansible_hostname }}'
+wsrep_sst_method=rsync
+wsrep_sst_auth={{db.repl_username}}:{{ db.repl_pass }}
+#
+# Optional setting
+#wsrep_slave_threads=1
+#innodb_flush_log_at_trx_commit=0
+#
+#https://www.percona.com/blog/2011/03/23/using-flexviews-part-one-introduction-to-materialized-views/
+##https://mariadb.com/kb/en/mariadb/flexviews/
+##mandatory for flexviews
+#binlog_format = ROW
+#server_id=999
+#
+###recomneded for flexviews
+#transaction-isolation = READ-COMMITTED
+#sync_binlog=1
+#sync_frm=1
+#innodb_safe_binlog=1
+
+
+# this is only for embedded server
+[embedded]
+
+# This group is only read by MariaDB servers, not by MySQL.
+# If you use the same .cnf file for MySQL and MariaDB,
+# you can put MariaDB-only options here
+[mariadb]
+
+# This group is only read by MariaDB-10.0 servers.
+# If you use the same .cnf file for MariaDB of different versions,
+# use this group for options that older servers don't understand
+[mariadb-10.1]

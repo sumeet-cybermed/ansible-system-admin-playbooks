@@ -1,0 +1,80 @@
+global:
+  scrape_interval:     5s
+  evaluation_interval: 5s
+  # scrape_timeout is set to the global default (10s).
+
+  # The labels to add to any time series or alerts when communicating with
+  # external systems (federation, remote storage, Alertmanager).
+  external_labels:
+    monitor: 'master'
+
+
+{% if prometheus_rule_files is defined %}
+# Rule files specifies a list of files from which rules are read.
+rule_files:
+  {% for (key, value) in prometheus_rule_files.iteritems() %}
+  - {{ prometheus_rule_path }}/{{ value.dest }}
+  {% endfor %}
+{% endif %}
+
+
+# A list of scrape configurations.
+scrape_configs:
+#
+  - job_name: linux
+    scrape_interval:     5s
+    scrape_timeout:  3s
+    scheme: "{{node_exporter_server_protocol}}"
+
+    basic_auth:
+      username: "{{http_auth_username}}"
+      password: "{{http_auth_userpassword}}"
+
+    static_configs:
+      - targets: [{{prometheus_node_static_targets}}]
+        labels:
+          alias: cluster
+
+  - job_name: mysql
+    scrape_interval:     5s
+    scrape_timeout:  3s
+    scheme: "{{mysqld_exporter_server_protocol}}"
+
+    basic_auth:
+      username: "{{http_auth_username}}"
+      password: "{{http_auth_userpassword}}"
+
+    static_configs:
+      - targets: [{{prometheus_mysqld_static_targets}}]
+        labels:
+          alias: cluster
+
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    scrape_timeout:  3s
+    scheme: "{{prometheus_server_protocol}}"
+
+    basic_auth:
+      username: "{{http_auth_username}}"
+      password: "{{http_auth_userpassword}}"
+
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: "node"
+    scrape_interval: 5s
+    scrape_timeout:  3s
+    scheme: "{{mysqld_exporter_server_protocol}}"
+
+    basic_auth:
+      username: "{{http_auth_username}}"
+      password: "{{http_auth_userpassword}}"
+
+    file_sd_configs:
+      - files:
+        - '{{ prometheus_file_sd_config_path }}/*.json'
+        - '{{ prometheus_file_sd_config_path }}/*.yml'
+        - '{{ prometheus_file_sd_config_path }}/*.yaml'
+    #static_configs:
+    #- targets:
+    #  - "localhost:9100"

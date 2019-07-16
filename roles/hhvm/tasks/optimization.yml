@@ -1,0 +1,7 @@
+---
+
+- name: build hhvm repo at web root
+  shell: "hhvm-repo-mode disable;hhvm-repo-mode enable {{ www_root }}"
+  ignore_errors: true
+  
+  

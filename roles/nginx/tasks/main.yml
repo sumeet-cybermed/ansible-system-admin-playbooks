@@ -1,0 +1,247 @@
+- name: Install Nginx GPG key (apt)
+  tags:  install_packages
+  apt_key: url=http://nginx.org/keys/nginx_signing.key state=present
+  when: "ansible_pkg_mgr=='apt' and (ansible_os_family != 'Debian')"
+  
+- name: Enable Nginx stable repo (apt)
+  tags:  install_packages
+  apt_repository: repo='deb http://nginx.org/packages/{{ ansible_distribution|lower}} {{ ansible_lsb.codename }} nginx' state=present  update_cache=yes
+  when: "ansible_pkg_mgr=='apt' and (ansible_os_family != 'Debian')"    
+
+- name: Stop and Disable Apache if running
+  tags:  install_packages
+  service: "name={{item}} state=stopped enabled=false"
+  with_items:
+    - apache2 #for apt
+    - httpd #for yum
+  ignore_errors: yes
+
+- name: lockdown www dir access
+  file:
+   path: "{{www_root}}"
+   mode: 0770
+   owner: "{{web_user}}"
+   group: "{{web_group}}"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+
+#
+- name: Install epel
+  tags:  install_packages
+  shell: "yum install -y epel-release"
+  when: true and ansible_pkg_mgr == 'yum'
+  ignore_errors: yes
+
+
+- name: Install epel for ulyaoth nginx-pagespeed
+  tags:  install_packages
+  shell: "yum install -y http://mirror.nsc.liu.se/fedora-epel/7/x86_64/e/epel-release-7-5.noarch.rpm"
+  when: nginx_pagespeed and ansible_pkg_mgr == 'yum'
+  ignore_errors: yes
+
+
+- name: Install nginx-pagespeed
+  tags:  install_packages
+  yum: "name={{item}} state={{installed_package_state}}"
+  with_items:
+    - ulyaoth-nginx-mainline-pagespeed
+  when: nginx_pagespeed and ansible_pkg_mgr == 'yum'
+
+
+- name: Install nginx
+  tags:  install_packages
+  yum: "name={{item}} state={{installed_package_state}}"
+  with_items:
+    - nginx
+  when: not nginx_pagespeed and ansible_pkg_mgr == 'yum'
+
+- name: Install nginx
+  tags:  install_packages
+  apt: "name={{item}} state={{installed_package_state}}"
+  with_items:
+    - nginx
+  when: "true and ansible_pkg_mgr == 'apt' "
+  
+- name: ensure can su to nginx  
+  shell: chsh -s /bin/bash {{web_user}}
+  ignore_errors: yes
+
+#user module fails - need to do in one go with shell script
+- name: kill nginx & change uid
+  tags: [ 'always' ]
+  shell: "service nginx stop | true; pkill nginx | true;usermod -u {{web_userid}} {{web_user}} | true"
+  ignore_errors: yes
+
+#group module fails - need to do in one go with shell script
+- name: kill nginx & change gid
+  tags: [ 'always' ]
+  shell: "service nginx stop | true; pkill nginx | true;groupmod -g {{web_groupid}} {{web_group}} | true"
+  ignore_errors: yes
+
+- name: start nginx as handlers will run only at end so server is accessible till then
+  service: name=nginx state=started
+
+- name: add apache user to nginx group so we can run both nginx and apache on same web root
+  tags: [ 'always' ]
+  user:
+    name: "{{item}}"
+    groups: "{{web_group}}"
+  with_items:
+      - "apache"
+      - "www-data"
+  ignore_errors: true
+
+- name: add nginx user to apache group so we can run both nginx and apache on same web root
+  tags: [ 'always' ]
+  user:
+    name: "{{web_user}}"
+    groups: "{{item}}"
+  with_items:
+      - "apache"
+      - "www-data"
+  ignore_errors: true
+
+- name: Install apache2-utils, etc
+  tags:  install_packages
+  action: "{{ ansible_pkg_mgr }} name={{item}} state=present"
+  with_items:
+    - apache2-utils #for apt
+    - httpd-tools #for yum
+  ignore_errors: true
+
+- name: Ensure /etc/nginx directories exist
+  tags: ['always']
+  file: path={{ item }} state=directory  
+  with_items:
+    - /etc/nginx
+  
+- name: Ensure /etc/nginx/sites directories dont exist
+  tags: ['always']
+  file: path={{ item }} state=absent
+  with_items:
+    - /etc/nginx/sites-available
+    - /etc/nginx/sites-enabled
+  
+- name: ensure nginx dirs exists
+  tags: ['always']
+  file: path={{ item }} state=directory owner={{web_user}} group={{web_user}}
+  with_items:
+    - "{{nginx_fcgi_cache_location}}"
+    - "{{nginx_proxy_cache_location}}"
+    - "{{ vagrant_doc_root }}"
+    - "{{ www_root }}"
+    - "{{ www_root }}/html"
+
+- name: upload server crt & keys
+  tags: ['always']
+  template: src=certificates/{{item}} dest=/etc/nginx/{{item}} owner=root group=root mode=0644
+  with_items:
+    - server.crt
+    - server.key
+
+- name: Remove default.conf
+  tags: ['always']
+  file: path=/etc/nginx/conf.d/default.conf state=absent
+
+- name: Configure /etc/nginx/nginx.conf
+  tags: ['always']
+  template: src=etc/nginx/nginx.conf dest=/etc/nginx/nginx.conf owner=root group=root mode=0644
+
+  #  prefix zz to vhost file so it is not used by nginx by default if another more matching file exits
+- name: Configure /etc/nginx/conf.d/default.conf
+  tags: ['always']
+  template: src=etc/nginx/conf.d/default.conf dest=/etc/nginx/conf.d/zz_default.conf owner=root group=root mode=0644
+  
+- name: "Configure {{www_root}}/index.html"
+  tags: ['always']
+  template: src=var/www/index.html dest="{{www_root}}/index.html" owner="{{web_user}}" group="{{web_group}}"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)  
+  
+- name: "Configure {{www_root}}/__phpinfo.php"
+  tags: ['always']
+  template: src=var/www/__phpinfo.php dest="{{www_root}}/__phpinfo.php" owner="{{web_user}}" group="{{web_group}}"
+  when: (not is_clustered_storage_var_www or cluster_master is defined)
+
+- name: Configure /etc/nginx/pagespeed.conf
+  tags: ['always']
+  template: src=etc/nginx/pagespeed.conf dest=/etc/nginx/pagespeed.conf owner=root group=root mode=0644
+  when: nginx_pagespeed
+
+- name: delete /etc/nginx/pagespeed.conf
+  tags: ['always']
+  file: path=/etc/nginx/pagespeed.conf state=absent
+  when: not nginx_pagespeed
+  tags: always
+
+- name: Configure /etc/nginx/fcgi_cache.conf
+  tags: ['always']
+  template: src=etc/nginx/fcgi_cache.conf dest=/etc/nginx/fcgi_cache.conf owner=root group=root mode=0644
+  
+- name: Configure /etc/nginx/proxy_cache.conf
+  tags: ['always']
+  template: src=etc/nginx/proxy_cache.conf dest=/etc/nginx/proxy_cache.conf owner=root group=root mode=0644
+  
+- name: Do nginx upstream.conf
+  tags: ['always']
+  template: src=etc/nginx/conf.d/upstream.conf dest=/etc/nginx/conf.d/upstream.conf owner=root group=root mode=0644
+    
+# - name: Do nginx htpasswd
+  # template: src=etc/nginx/.htpasswd dest=/etc/nginx/.htpasswd owner=root group=root mode=0644
+  
+- name: create nginx .htpasswd file
+  tags: ['always']
+  htpasswd:   
+    path: /etc/nginx/.htpasswd 
+    owner: root
+    group: root
+    mode: 0644
+    name: "{{item.name}}"
+    password: "{{item.password}}"
+  with_items:
+    - { name: "{{admin_username}}", password: "{{admin_userpassword}}" }
+    - { name: "{{http_auth_username}}", password: "{{http_auth_userpassword}}" }
+    - { name: "{{dev_username}}", password: "{{dev_userpassword}}" }
+    
+
+- name: set log permissions (needed for centos for pml to work)
+  tags: ['always']
+  file: path=/var/log/nginx/ state=directory owner={{ web_user }} group={{ web_group }} recurse=yes
+  ignore_errors: true
+  
+- name: open firewall for nginx (http)
+  tags: ['always']
+  firewalld: service=http permanent=true state=enabled
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  ignore_errors: false
+    
+- name: open firewall for nginx (https)
+  tags: ['always']
+  firewalld: service=https permanent=true state=enabled
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  ignore_errors: false
+  
+- name: reload firewall
+  tags: ['always']
+  shell: "firewall-cmd --reload"
+  when: firewall_state=='enabled' and (ansible_distribution_major_version|int) > 6
+  
+# # not needed from v7 onwards
+# - name: install selinux protection for nginx
+  # shell: "yum install -y selinux-policy-devel selinux-policy-targeted && cd /opt && rm -Rf selinux-nginx-rhel && git clone --depth=1 https://github.com/jahrmando/selinux-nginx-rhel.git && cd selinux-nginx-rhel/nginx && make && /usr/sbin/semodule -i nginx.pp"  
+  # ignore_errors: true
+
+- name: ensure web user can upload files or make large posts
+  tags: ['always']
+  file: path=/var/lib/nginx state=directory owner={{ web_user }} group={{ web_group }}  recurse=yes
+  ignore_errors: true
+  
+- name: ensure cache/nginx has sellinux permissions
+  tags: ['always']
+  shell: chcon -R -t httpd_sys_content_t /var/cache/nginx/
+  ignore_errors: true
+    
+- name: enable autostart of nginx and restart
+  tags: ['always']
+  service: name=nginx enabled=true state=restarted
+  sudo: yes
+  ignore_errors: yes
+

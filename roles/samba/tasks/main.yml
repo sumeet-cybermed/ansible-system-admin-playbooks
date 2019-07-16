@@ -1,0 +1,63 @@
+---
+ - name: Install the Samba and additional packages (apt)
+   apt: "name={{ item }} state={{installed_package_state}}"
+   tags:  install_packages
+   with_items:
+     - cifs-utils
+     - samba
+     - smbclient
+     - samba-common
+     - python-glade2
+     #- system-config-samba #not avial on debian
+   when: "ansible_pkg_mgr=='apt'"
+  
+ - name: Install the Samba and additional packages (yum)
+   yum: "name={{ item }} state={{installed_package_state}}"
+   tags:  install_packages
+   with_items:
+     - cifs-utils
+     - samba
+     - samba-common
+     - samba-client 
+   when: "ansible_pkg_mgr=='yum'"
+   
+ - name: Copy the Customize smb.conf file
+   template: src=etc_samba_smb.conf dest=/etc/samba/smb.conf backup=yes
+
+   
+ - name: Create Samba users restricted group
+   group: name={{ samba_group_name }} state=present
+
+ - name: Add the User(s) to Samba group
+   user: name={{ item.name }} groups={{ samba_group_name }} append=yes
+   with_items:
+     samba_users
+
+ - name: Create Samba Password for User(s)
+   shell: (echo {{ item.smbpasswd }}; echo {{ item.smbpasswd }}) | smbpasswd -s -a {{ item.name }}
+   with_items:
+     samba_users
+
+ - name: Create {{ public_share_path }} directory
+   file: state=directory path={{ public_share_path }} 
+
+ - name: Create {{ private_share_path1 }} directory
+   file: state=directory path={{ private_share_path1 }} 
+ 
+ - name: Create {{ private_share_path2 }} directory
+   file: state=directory path={{ private_share_path2 }} 
+ 
+ - name: Create {{ private_share_path3 }} directory
+   file: state=directory path={{ private_share_path3 }} 
+  
+ - debug: var=samba_service_names
+  
+ - name: enable autostart of samba
+   service: name={{ item }} enabled=true
+   with_items:
+     - "{{ samba_service_names }}"
+   # tags:  ['samba']
+
+ - name: Ensure samba is restarted
+   command: /bin/true
+   notify: Restart Samba

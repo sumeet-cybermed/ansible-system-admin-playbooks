@@ -1,0 +1,5 @@
+---
+__mysql_daemon: mysql #for consistency with rest of code
+__mysql_packages:
+  - mariadb-server
+  - mariadb

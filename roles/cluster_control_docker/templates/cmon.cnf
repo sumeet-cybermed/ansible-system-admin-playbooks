@@ -1,0 +1,6 @@
+mysql_port=3306
+mysql_hostname=127.0.0.1
+mysql_password=cmon
+hostname=127.0.0.1
+mysql_basedir=/var/lib/mysql/
+os_user=root

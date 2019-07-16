@@ -1,0 +1,51 @@
+---
+- hosts: all
+  # ### remote_user: vagrant
+  serial: "{{serial_var}}"
+  #allow 2 out of 3 to fail while downloading packages to shared host directory
+  max_fail_percentage: 1
+  sudo: yes
+
+  vars_files:
+    - "{{pb_app_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_config_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_site_vars_file}}" #parsed from extra args in config.yml
+
+  roles:
+#    - debugging
+    - handlers
+    - development_host_and_user
+#    - nginx
+    - cluster_control_docker
+#    - hhvm
+#    - nginx
+#    - nfs
+#    - {
+#       role: development_host_and_user,
+#       when: true
+#      }
+#    - backup
+#    - {
+#        role: webapp_code,
+#        domain: "{{ webapp_php_domains[0] }}",
+#        when: true
+#      }
+#    - {
+#        role: webapp_vhosts,
+#        backend: hhvm,
+#        domain: "{{ webapp_hhvm_domains }}"
+#      }
+#
+#    - {
+#        role: webapp_vhosts,
+#        backend: php,
+#        domain: "{{ webapp_php_domains }}"
+#      }
+#
+#    - {
+#        role: webapp_vhosts,
+#        backend: php7,
+#        domain: "{{ webapp_php7_domains }}"
+#      }
+#
+#    - security

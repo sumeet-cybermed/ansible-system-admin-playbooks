@@ -1,0 +1,34 @@
+# dump all variables for all hosts: http://stackoverflow.com/questions/18839509/where-can-i-get-a-list-of-ansible-pre-defined-variables
+#After that you have a dump of all variables on every host, and a copy of each text dump file on your local workstation in your tmp folder. If you don't want local copies, you can remove the fetch statement.
+- name: dump all ansible variables to remote /tmp/ansible_variables.yml
+  template:
+    src: dump_variables.yml
+    dest: "{{item}}"
+    owner: root
+    group: root
+  with_items:
+    - "/root/{{inventory_hostname}}_ansible_variables.yml"
+    ## fails with text file is busy
+    # - "/vagrant/provisioning/ansible/dumps/{{inventory_hostname}}_ansible_variables.txt"
+  ignore_errors: true
+  tags: ['always']
+
+- debug:
+    msg: "{{item}}"
+  with_items:
+#    - "pb_app_vars_file: {{pb_app_vars_file}}"
+#    - "pb_site_vars_file: {{pb_site_vars_file}}"
+#    - "is_cluster: {{is_cluster}}"
+#    - "is_part_of_cluster: {{is_part_of_cluster}}"
+#    - "is_clustered_storage_var_www: {{is_clustered_storage_var_www}}"
+#    - "is_clustered_storage_var_backups: {{is_clustered_storage_var_backups}}"
+#    - "is_clustered_db: {{is_clustered_db}}"
+#    - "cluster_master is defined: {{cluster_master is defined}}"
+    - "nfs_shares_available: {{nfs_shares_available}}"
+    - "backup_schedules: {{backup_schedules}}"
+    - "lb: {{lb}}"
+    - "db: {{db}}"
+    - "server_urls_hosts_file_block: {{server_urls_hosts_file_block}}"
+    - "inventory_hosts_file_block: {{inventory_hosts_file_block}}"
+  ignore_errors: true
+  tags: ['always']

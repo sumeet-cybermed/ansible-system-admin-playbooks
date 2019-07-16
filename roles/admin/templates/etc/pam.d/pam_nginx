@@ -1,0 +1,2 @@
+auth    optional     pam_faildelay.so  delay=3000000
+auth    required     pam_succeed_if.so user ingroup {{dev_groupname}}

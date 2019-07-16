@@ -1,0 +1,34 @@
+# roles/bind/tasks/main.yml
+---
+
+- debug: var=ansible_all_ipv4_addresses
+
+- name: Install BIND
+  tags:  install_packages
+  yum:
+    pkg: "{{ item }}"
+    state: latest
+  with_items: bind_packages
+  # tags:  bind
+
+- name: Create serial
+  tags: [ 'always' ]
+  command: date +%y%m%d%H
+  register: timestamp
+  # tags:  bind
+
+- include: master.yml
+  when: ansible_all_ipv4_addresses|last == bind_zone_master_server_ip
+  tags: ['always']
+
+- include: slave.yml
+  when: not ansible_all_ipv4_addresses|last == bind_zone_master_server_ip
+  tags: ['always']
+
+- name: Start BIND service
+  service:
+    name: named
+    state: started
+    enabled: yes
+  # tags:  bind
+

@@ -1,0 +1,59 @@
+---
+- hosts: all
+  ### remote_user: vagrant
+  serial: "{{serial_var}}"
+  #allow 2 out of 3 to fail while downloading packages to shared host directory
+  max_fail_percentage: 1
+  sudo: yes  
+   
+  vars_files:
+    - "{{pb_app_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_config_vars_file}}" #parsed from extra args in config.yml
+    - "{{pb_site_vars_file}}" #parsed from extra args in config.yml
+      
+
+  vars:
+    - is_initial_run: true
+   
+
+  roles:
+    - handlers
+    # - essentials  
+    
+    # Set up a WordPress endpoint served by HHVM and PHP-FPM.
+    - {
+        role: wordpress,
+        webapp: "{{ sites.webapp }}",
+        webapp_desc: "{{ sites.webapp_desc }}",
+        domain: "{{ sites.webapp_hhvm_domains[0] }}",
+        wordpress_db_user_password: 'xyz123',
+        # tags:  [ 'sites-wp' ]
+      }
+    - {
+        role: wordpress_listener,
+        webapp: "{{ sites.webapp }}",
+        webapp_desc: "{{ sites.webapp_desc }}",
+        backend: hhvm,
+        domain: "{{ sites.webapp_hhvm_domains }}",
+        # tags:  [ 'sites-wp' ],
+        when: sites.webapp_hhvm_domains is defined
+      }
+    - {
+        role: wordpress_listener,
+        webapp: "{{ sites.webapp }}",
+        webapp_desc: "{{ sites.webapp_desc }}",
+        backend: php,
+        domain: "{{ sites.webapp_php_domains }}",
+        # tags:  [ 'sites-wp' ],
+        when: sites.webapp_php_domains is defined
+      }
+    - {
+        role: wordpress_listener,
+        webapp: "{{ sites.webapp }}",
+        webapp_desc: "{{ sites.webapp_desc }}",
+        backend: php7,
+        domain: "{{ sites.webapp_php7_domains }}",
+        # tags:  [ 'sites-wp' ],
+        when: sites.webapp_php7_domains is defined
+      }
+   

@@ -1,0 +1,7 @@
+---
+tomcat6_enabled: true
+tomcat6_hostname: localhost
+tomcat6_server_port: 8005
+tomcat6_catalina_port: 8983
+tomcat6_catalina_redirect_port: 8443
+tomcat6_java_home: "{{ force_tomcat6_java_home or '/usr/lib/jvm/java-6-oracle' }}"

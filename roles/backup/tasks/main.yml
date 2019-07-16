@@ -1,0 +1,6 @@
+---
+- name: Install backup ninja
+  include: backupninja.yml
+  tags: ['always']
+  
+    

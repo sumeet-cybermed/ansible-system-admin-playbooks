@@ -1,0 +1,13 @@
+---
+
+- include: install.yml
+  tags: ['always']
+
+- include: config.yml
+  tags: ['always']
+
+- include: service.yml
+  tags: ['always']
+
+- include: users.yml
+  tags: ['always']

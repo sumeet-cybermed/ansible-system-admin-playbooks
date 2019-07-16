@@ -1,0 +1,2 @@
+
+# virtualbox_is_installed_shell_command: "{% if ansible_pkg_mgr=='apt' %}dpkg-query -W virtualbox{% else %}rpm -q virtualbox{% endif %}"

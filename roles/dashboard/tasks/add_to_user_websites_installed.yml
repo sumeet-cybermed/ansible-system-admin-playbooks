@@ -1,0 +1,35 @@
+###    
+
+- name: Include default vars
+  tags: ['always']
+  include_vars: default.yml
+  
+- name: check if file exists
+  tags: [ 'always' ]
+  stat: 
+    path: "{{user_websites_installed_file}}"
+  register: user_websites_installed_file_exists
+
+- name: copy blank file if not exists
+  copy: 
+    src: "roles/dashboard/vars/user_websites_installed.yml"
+    dest: "{{user_websites_installed_file}}"
+  when: not user_websites_installed_file_exists.stat.exists
+  
+- name: add to dashboard user_websites_installed.yml for this host
+  lineinfile:
+     dest: "{{user_websites_installed_file}}"
+     line: "{{user_websites_installed_line}}"
+     state: absent
+     
+- name: add to dashboard user_websites_installed.yml for this host
+  lineinfile:
+     dest: "{{user_websites_installed_file}}"
+     line: "{{user_websites_installed_line}}"
+     state: present
+     
+- name: regenerate dashboard file
+  include: main.yml
+  tags: ['always']
+  
+###    

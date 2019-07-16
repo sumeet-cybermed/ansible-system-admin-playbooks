@@ -1,0 +1,226 @@
+---
+- name: Copy nginx config
+  sudo: yes
+  template:
+    src: etc/nginx/phabricator.conf
+    dest: /etc/nginx/conf.d/{{ webapp }}-{{ backend }}.conf
+  notify:
+    - nginx restart 
+
+- name: ensure nginx is enabled
+  sudo: yes
+  service:
+    name: nginx
+    enabled: yes
+    
+- name: restart nginx
+  command: /bin/true
+  notify: nginx restart
+    
+- name: add user phabricatord
+  tags: [ install_packages ]
+  sudo: yes
+  user:
+    name: phabricatord
+    password: "$6$.nd53PkO$GuYKTpQQjtc.S35Rrp3xU1x0SetDU8nCDnT.0CMjuiqr6kiotkYeDkZHtE799qPxMHJeTf/Y9IHy7RRHmRhia/"
+    update_password: always
+
+- name: add user git
+  tags: [ install_packages ]
+  sudo: yes
+  user:
+    name: git
+    password: "NP"
+    update_password: always
+
+- name: ensure dirs exist
+  tags: [ 'always' ]
+  file:    
+    path: "{{item}}"
+    state: directory
+    owner: "{{web_user}}"
+    group: "{{web_group}}"
+  with_items:
+    - "/var/downloads"
+    - "{{ www_root}}"
+    - "{{ www_root}}/libphutil"
+    - "{{ www_root}}/arcanist"
+    - "{{ phabricator_path }}"    
+
+- name: Clone libphutil
+  tags: [ install_packages ]
+  sudo: yes
+  sudo_user: "{{web_user}}"
+  git:
+    repo: https://github.com/phacility/libphutil
+    dest: "{{ www_root}}/libphutil/"
+    force: yes
+    update: yes
+    accept_hostkey: yes
+    depth: 1
+
+- name: Clone arcanist
+  tags: [ install_packages ]
+  git:
+    repo: https://github.com/phacility/arcanist
+    dest: "{{ www_root}}/arcanist/"
+    force: yes
+    update: yes
+    accept_hostkey: yes
+    depth: 1
+    
+- name: Clone phabricator
+  tags: [ install_packages ]
+  git:
+    repo: https://github.com/phacility/phabricator
+    dest: "{{ phabricator_path }}/"
+    force: yes
+    update: yes
+    accept_hostkey: yes
+    depth: 1
+    
+- name: Place phabricator config
+  template:
+    src: myconfig.conf.php
+    dest: "{{ phabricator_path }}/conf/default.conf.php"
+
+- name: "Create and Grant phabricator user SUPER access"
+  mysql_user: 
+    name: "{{ webapp_db_user_name }}" 
+    priv: "*.*:ALL" 
+    host: "{{ item }}" 
+    password: "{{ webapp_db_user_password }}"
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_secure_password }}"
+    login_port: "{{db.mysql_listen_port}}"
+  with_items:
+   - localhost
+   - 127.0.0.1
+   - "%"
+    
+- name: set phabricator db parameters
+  command: "chdir={{ phabricator_path }} {{item}}"
+  with_items:
+    - "./bin/config set mysql.port {{db.mysql_listen_port}}"
+    - "./bin/config set mysql.user {{ webapp_db_user_name }}"
+    - "./bin/config set mysql.pass {{ webapp_db_user_password }}"
+    - "./bin/config set phabricator.base-uri '{{ phabricator_base_uri }}'"
+
+- name: Migrate the database
+  sudo: yes
+  sudo_user: phabricatord
+  command: chdir={{ phabricator_path }} ./bin/storage upgrade --force
+ 
+ 
+- name: configure mysql - remove existing
+  lineinfile:
+    regexp: "{{item.regexp}}"
+    state: "absent"
+    dest: /etc/my.cnf
+  with_items:
+    - {regexp: "ft_boolean_syntax=", line: "ft_boolean_syntax=' |-><()~*:\"\"&^'", state: present }
+    - {regexp: "ft_min_word_len=", line: "ft_min_word_len=3", state: present }
+    - {regexp: "ft_stopword_file=", line: "ft_stopword_file=/var/www/phabricator/resources/sql/stopwords.txt", state: present }
+    - {regexp: "max_allowed_packet=", line: "max_allowed_packet=33554432", state: present }
+    - {regexp: "innodb_buffer_pool_size=", line: "innodb_buffer_pool_size=1600M", state: present }
+    # - {regexp: "sql_mode=", line: "sql_mode=STRICT_ALL_TABLES", state: present }
+     
+- name: configure mysql - add to mysqld section [note - lineafter [mysqld is buggy]]
+  lineinfile:
+    regexp: '\[mysqld\]'
+    line: "{{item.line}}"
+    state: present
+    dest: /etc/my.cnf
+  with_items:
+    - {regexp: "ft_boolean_syntax=", line: "[mysqld]\nft_boolean_syntax=' |-><()~*:\"\"&^'", state: present }
+    - {regexp: "ft_min_word_len=", line: "[mysqld]\nft_min_word_len=3", state: present }
+    - {regexp: "ft_stopword_file=", line: "[mysqld]\nft_stopword_file=/var/www/phabricator/resources/sql/stopwords.txt", state: present }
+    - {regexp: "max_allowed_packet=", line: "[mysqld]\nmax_allowed_packet=33554432", state: present }
+    - {regexp: "innodb_buffer_pool_size=", line: "[mysqld]\ninnodb_buffer_pool_size=1600M", state: present }
+    # # # - {regexp: "sql_mode=", line: "sql_mode=STRICT_ALL_TABLES", state: present }
+   
+- name: restart mysql
+  shell: /bin/true
+  notify: mysql restart
+  
+- name: repair phabricator tables
+  shell: "mysql  -u '{{mysql_root_user}}' -p'{{mysql_root_secure_password}}' -e '{{item}}'"
+  with_items:
+    - "REPAIR TABLE phabricator_search.search_documentfield;"
+    
+- name: Create the repository directory
+  tags: [ 'always' ]
+  sudo: yes
+  file:
+    path: "{{ repositories_path }}"
+    owner: phabricatord
+    group: phabricatord
+    state: directory
+    
+- name: set phd.user
+  sudo: yes
+  shell: "{{phabricator_path}}/bin/config set phd.user root"
+
+- name: ensure /phd deamon is started/ directory is created at each boot!
+  lineinfile: 
+    dest: "{{user_system_scripts_directory}}/01_run_on_boot.sh"
+    line: "{{phabricator_path}}/bin/phd restart;"
+    state: "{{item}}"
+    create: true
+  with_items:
+    - absent
+    - present
+
+- name: restart phabricator
+  command: /bin/true
+  notify:
+    - phabricator restart    
+
+# # ###################
+# # #autostart deamon 
+# # ####################    
+# # # - name: ensure dirs exist
+  # # # file:    
+    # # # path: "{{item}}"
+    # # # state: directory
+    # # # owner: "root"
+    # # # group: "root"
+  # # # with_items:
+    # # # - "/etc/init.d/"
+
+# # # ## for old systems    
+# # # - name: copy phd init script
+  # # # sudo: yes
+  # # # template:
+    # # # src: phd
+    # # # dest: /etc/init.d/phd
+    # # # owner: root
+    # # # group: root
+    # # # mode: 0755
+
+# # # ## for old systems    
+# # # - name: run phd and enable autostart
+  # # # sudo: yes
+  # # # service:
+    # # # name: phd
+    # # # state: started
+    # # # enabled: yes
+  # # # ignore_errors: true #todo: cross os service creation
+  
+# # # ## for systemd based systems - 1 - still buggy
+# # # - name: create systemd phabricator-phd.service file 
+  # # # template:
+     # # # src: lib/systemd/system/phabricator-phd.service
+     # # # dest: /lib/systemd/system/phabricator-phd.service
+  # # # ignore_errors: true
+
+# # # - name: enable systemd phabricator-phd.service
+  # # # shell: "systemctl enable phabricator-phd"
+  # # # ignore_errors: true
+  
+# # # - name: restart systemd phabricator-phd.service
+  # # # shell: "systemctl start phabricator-phd"
+  # # # async: 5
+  # # # poll: 1
+  # # # ignore_errors: true

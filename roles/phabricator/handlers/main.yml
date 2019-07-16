@@ -1,0 +1,4 @@
+- name: phabricator restart
+  command: "chdir={{ phabricator_path }} {{item}}"
+  with_items:
+    - "./bin/phd restart"    
